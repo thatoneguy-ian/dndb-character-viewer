@@ -591,21 +591,33 @@ function ConditionsRow({ character }: { character: any }) {
   const [open, setOpen] = useState<ConditionDef | null>(null);
 
   // Determine active conditions from a few possible payload locations.
+  // Map numeric IDs (from payload) to canonical condition names
+  const CONDITION_ID_MAP: Record<number, string> = {
+    1: 'Blinded', 2: 'Charmed', 3: 'Deafened', 5: 'Frightened', 6: 'Grappled',
+    7: 'Incapacitated', 8: 'Invisible', 9: 'Paralyzed', 10: 'Petrified', 11: 'Poisoned',
+    12: 'Prone', 13: 'Restrained', 14: 'Stunned', 15: 'Unconscious'
+  };
+
   const getActiveConditions = () => {
     if (!character) return [] as string[];
-    // Common places: character.conditions (array of strings or objects), character.statusEffects, character.appliedConditions
     const candidates: string[] = [];
-    if (Array.isArray(character.conditions)) {
-      character.conditions.forEach((c: any) => { if (typeof c === 'string') candidates.push(c); else if (c?.name) candidates.push(c.name); });
-    }
-    if (Array.isArray(character.appliedConditions)) {
-      character.appliedConditions.forEach((c: any) => { if (typeof c === 'string') candidates.push(c); else if (c?.name) candidates.push(c.name); });
-    }
-    if (Array.isArray(character.statusEffects)) {
-      character.statusEffects.forEach((c: any) => { if (typeof c === 'string') candidates.push(c); else if (c?.name) candidates.push(c.name); });
-    }
-    // Normalize
-    return candidates.map(s => String(s).trim()).filter(Boolean);
+
+    const pushFromEntry = (c: any) => {
+      if (!c && c !== 0) return;
+      if (typeof c === 'string') { candidates.push(c); return; }
+      if (typeof c === 'number') { const mapped = CONDITION_ID_MAP[c]; if (mapped) candidates.push(mapped); return; }
+      if (c?.name) { candidates.push(c.name); return; }
+      if (c?.id != null) {
+        const idNum = Number(c.id);
+        if (!Number.isNaN(idNum) && CONDITION_ID_MAP[idNum]) candidates.push(CONDITION_ID_MAP[idNum]);
+      }
+    };
+
+    if (Array.isArray(character.conditions)) character.conditions.forEach(pushFromEntry);
+    if (Array.isArray(character.appliedConditions)) character.appliedConditions.forEach(pushFromEntry);
+    if (Array.isArray(character.statusEffects)) character.statusEffects.forEach(pushFromEntry);
+
+    return Array.from(new Set(candidates.map(s => String(s).trim()).filter(Boolean)));
   };
 
   const active = getActiveConditions();
