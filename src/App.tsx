@@ -321,6 +321,8 @@ function App() {
                       </div>
                     ))}
                   </div>
+                  {/* CONDITIONS: icons-only row under Skills */}
+                  <ConditionsRow character={character} />
                 </div>
               </div>
             </div>
@@ -564,3 +566,88 @@ function App() {
 }
 
 export default App;
+
+// -------------------- Conditions UI Component --------------------
+interface ConditionDef { key: string; emoji: string; label: string; description: string }
+
+const CONDITIONS: ConditionDef[] = [
+  { key: 'Blinded', emoji: '👁️', label: 'Blinded', description: `Blinded: While you have the Blinded condition, you experience the following effects.\n* Can't See. You can't see and automatically fail any ability check that requires sight.\n* Attacks Affected. Attack rolls against you have Advantage, and your attack rolls have Disadvantage.` },
+  { key: 'Charmed', emoji: '💘', label: 'Charmed', description: 'Charmed: You can\'t attack the charmer and the charmer has advantage on social checks.' },
+  { key: 'Deafened', emoji: '🦻', label: 'Deafened', description: 'Deafened: You can\'t hear and automatically fail any ability check that requires hearing.' },
+  { key: 'Frightened', emoji: '😱', label: 'Frightened', description: 'Frightened: You have disadvantage on ability checks and attack rolls while the source of your fear is within line of sight.' },
+  { key: 'Grappled', emoji: '🤼', label: 'Grappled', description: 'Grappled: Your speed is 0 and you can\'t benefit from any bonus to your speed.' },
+  { key: 'Incapacitated', emoji: '🚫', label: 'Incapacitated', description: 'Incapacitated: You can\'t take actions or reactions.' },
+  { key: 'Invisible', emoji: '🫥', label: 'Invisible', description: 'Invisible: You are unseen. Attack rolls against you have disadvantage; your attack rolls have advantage when you attack from invisibility.' },
+  { key: 'Paralyzed', emoji: '🧍‍♂️', label: 'Paralyzed', description: 'Paralyzed: You are incapacitated and can\'t move or speak. Attack rolls against you have advantage and any hit that deals bludgeoning damage is a critical hit.' },
+  { key: 'Petrified', emoji: '🪨', label: 'Petrified', description: 'Petrified: You are transformed into a solid inanimate substance and are incapacitated.' },
+  { key: 'Poisoned', emoji: '☠️', label: 'Poisoned', description: 'Poisoned: You have disadvantage on attack rolls and ability checks.' },
+  { key: 'Prone', emoji: '🧎', label: 'Prone', description: 'Prone: You are on the ground. You have disadvantage on attack rolls, and attackers within 5 ft have advantage.' },
+  { key: 'Restrained', emoji: '🔗', label: 'Restrained', description: 'Restrained: Your speed is 0 and you have disadvantage on Dexterity saving throws.' },
+  { key: 'Stunned', emoji: '💫', label: 'Stunned', description: 'Stunned: You are incapacitated, can\'t move, and can\'t speak.' },
+  { key: 'Unconscious', emoji: '🛌', label: 'Unconscious', description: 'Unconscious: You are incapacitated, can\'t move or speak, and are unaware of your surroundings.' }
+];
+
+function ConditionsRow({ character }: { character: any }) {
+  const [open, setOpen] = useState<ConditionDef | null>(null);
+
+  // Determine active conditions from a few possible payload locations.
+  const getActiveConditions = () => {
+    if (!character) return [] as string[];
+    // Common places: character.conditions (array of strings or objects), character.statusEffects, character.appliedConditions
+    const candidates: string[] = [];
+    if (Array.isArray(character.conditions)) {
+      character.conditions.forEach((c: any) => { if (typeof c === 'string') candidates.push(c); else if (c?.name) candidates.push(c.name); });
+    }
+    if (Array.isArray(character.appliedConditions)) {
+      character.appliedConditions.forEach((c: any) => { if (typeof c === 'string') candidates.push(c); else if (c?.name) candidates.push(c.name); });
+    }
+    if (Array.isArray(character.statusEffects)) {
+      character.statusEffects.forEach((c: any) => { if (typeof c === 'string') candidates.push(c); else if (c?.name) candidates.push(c.name); });
+    }
+    // Normalize
+    return candidates.map(s => String(s).trim()).filter(Boolean);
+  };
+
+  const active = getActiveConditions();
+  const activeDefs = CONDITIONS.filter(cd => active.some(a => a.toLowerCase() === cd.key.toLowerCase()));
+
+  // If none found, return nothing.
+  if (!activeDefs || activeDefs.length === 0) return null;
+
+  return (
+    <div className="mt-2">
+      <div className="text-[9px] font-bold text-gray-500 uppercase mb-1">Conditions</div>
+      <div className="flex gap-2 items-center" aria-hidden={false}>
+        {activeDefs.map((c) => (
+          <button
+            key={c.key}
+            onClick={(e) => { e.stopPropagation(); setOpen(c); }}
+            title={c.label}
+            aria-label={c.label}
+            className="w-7 h-7 rounded flex items-center justify-center bg-gray-800 border border-gray-700 text-xl hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <span aria-hidden>{c.emoji}</span>
+          </button>
+        ))}
+      </div>
+
+      {open && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center" role="dialog" aria-modal="true">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setOpen(null)} />
+          <div className="relative bg-gray-900 border border-gray-700 rounded p-4 w-11/12 max-w-lg text-sm text-gray-200 z-50">
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="font-bold text-white text-lg">{open.label}</div>
+                <div className="text-xs text-gray-400 mt-1">Condition Details</div>
+              </div>
+              <button onClick={() => setOpen(null)} className="text-gray-400 hover:text-white">✕</button>
+            </div>
+            <div className="mt-3 whitespace-pre-line text-xs text-gray-300">{open.description}</div>
+            <div className="mt-3 text-[11px] text-gray-500 italic">Legacy Definition</div>
+            <div className="mt-1 text-xs text-gray-400">* {open.label} effects mirror classic rules; see rules text for full details.</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
