@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   getAbilityScore, 
   getModString, 
@@ -50,20 +50,6 @@ function App() {
   });
 
   const [expandedId, setExpandedId] = useState<string | null>(null); 
-  const [hoverId, setHoverId] = useState<string | null>(null); 
-  const hoverTimer = useRef<number | null>(null);
-
-  const handleMouseEnter = (id: string) => {
-    if (hoverTimer.current) clearTimeout(hoverTimer.current);
-    hoverTimer.current = window.setTimeout(() => {
-      setHoverId(id);
-    }, 500); 
-  };
-
-  const handleMouseLeave = () => {
-    if (hoverTimer.current) clearTimeout(hoverTimer.current);
-    setHoverId(null);
-  };
 
   const handleClickCard = (id: string) => {
     setExpandedId(prev => (prev === id ? null : id));
@@ -295,7 +281,7 @@ function App() {
 
       <div className="flex-1 overflow-y-auto p-3 pt-0">
         {sheetMode === 'main' && character && (
-          <>
+          <div key="main" className="animate-in fade-in duration-300">
             <div className="grid grid-cols-6 gap-1 text-center mb-2 mt-2">
                {[1, 2, 3, 4, 5, 6].map((id) => (
                   <div key={id} className="bg-gray-800 p-1 rounded">
@@ -309,7 +295,7 @@ function App() {
               <button onClick={() => setShowSkills(!showSkills)} className="w-full flex justify-between items-center p-2 text-xs font-bold text-gray-400 hover:bg-gray-800 hover:text-white">
                 <span>SKILLS</span>{showSkills ? <IconChevronUp /> : <IconChevronDown />}
               </button>
-              {showSkills && (
+              <div className={`transition-all duration-300 ease-in-out overflow-hidden ${showSkills ? 'max-h-96' : 'max-h-0'}`}>
                 <div className="p-2 border-t border-gray-800 bg-gray-900">
                   <div className="flex justify-end mb-2">
                     <button onClick={() => setSkillSort(skillSort === 'name' ? 'bonus' : 'name')} className="text-[9px] text-blue-400 uppercase font-bold">Sort by: {skillSort}</button>
@@ -323,7 +309,7 @@ function App() {
                     ))}
                   </div>
                 </div>
-              )}
+              </div>
             </div>
 
             <div className="flex border-b border-gray-700 mb-3 sticky top-0 bg-gray-900 z-10 pt-2">
@@ -332,27 +318,41 @@ function App() {
               ))}
             </div>
 
+            {/* NEW: Spell Slot Bar */}
+            {activeTab === 'Spell' && spellSlots.length > 0 && (
+              <div className="mb-3 px-2 py-1.5 text-xs text-center bg-gray-800 border border-gray-700 rounded-md flex flex-wrap justify-center items-center gap-x-3 gap-y-1">
+                {spellSlots.map((slot, idx) => {
+                  const getOrdinal = (n: number) => {
+                    if (n > 3 && n < 21) return `${n}th`;
+                    switch (n % 10) {
+                      case 1:  return `${n}st`;
+                      case 2:  return `${n}nd`;
+                      case 3:  return `${n}rd`;
+                      default: return `${n}th`;
+                    }
+                  };
+                  return (
+                    <div key={idx} className="flex items-center gap-1.5">
+                      <span className="font-bold text-blue-300 whitespace-nowrap">
+                        {slot.name || getOrdinal(slot.level)}:
+                      </span>
+                      <span className="text-white font-mono">{slot.max - slot.used}/{slot.max}</span>
+                      {idx < spellSlots.length - 1 && <span className="text-gray-600">|</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
             {/* SPELL SLOTS & FILTERS (Only on Spell Tab) */}
             {activeTab === "Spell" && (
               <div className="mb-4">
-                 {spellSlots.length > 0 && (
-                   <div className="flex flex-wrap gap-2 mb-3 text-[10px] bg-gray-800 p-2 rounded border border-gray-700">
-                     {spellSlots.map((slot, idx) => (
-                       <div key={idx} className="flex gap-1 items-center text-gray-300">
-                         <span className="font-bold text-blue-300">{slot.name ? slot.name : (slot.level + (slot.level === 1 ? "st" : slot.level === 2 ? "nd" : slot.level === 3 ? "rd" : "th"))}:</span>
-                         <span className="text-white">{slot.max - slot.used}/{slot.max}</span>
-                         {idx < spellSlots.length - 1 && <span className="text-gray-600 ml-1">|</span>}
-                       </div>
-                     ))}
-                   </div>
-                 )}
-
                  <div className="flex justify-between items-center mb-2">
                     <button onClick={() => setFilters(f => ({ ...f, attackOnly: !f.attackOnly }))} className={`text-[10px] px-2 py-1 rounded border ${filters.attackOnly ? 'bg-red-900/50 border-red-500 text-red-200' : 'border-gray-600 text-gray-400 hover:text-white'}`}>⚔️ Attacks Only</button>
                     <button onClick={() => setShowAdvanced(!showAdvanced)} className={`text-[10px] px-2 py-1 rounded border ${showAdvanced ? 'bg-gray-700 border-gray-500 text-white' : 'border-gray-600 text-gray-400 hover:text-white'}`}>Filters {showAdvanced ? '▲' : '▼'}</button>
                  </div>
 
-                 {showAdvanced && (
+                 <div className={`transition-all duration-300 ease-in-out overflow-hidden ${showAdvanced ? 'max-h-96' : 'max-h-0'}`}>
                    <div className="bg-gray-800 p-2 rounded mb-3 border border-gray-700">
                      <div className="text-[9px] font-bold text-gray-500 uppercase mb-1">Spell Levels</div>
                      <div className="flex flex-wrap gap-1">
@@ -361,7 +361,7 @@ function App() {
                        ))}
                      </div>
                    </div>
-                 )}
+                 </div>
               </div>
             )}
 
@@ -375,45 +375,45 @@ function App() {
                          {lvl === 0 ? "Cantrips" : `Level ${lvl}`}
                        </div>
                        <div className="space-y-2">
-                       {spellsByLevel[lvl].map((spell, idx) => {
-                         const uniqueId = `spell-${lvl}-${idx}`;
-                         const isOpen = expandedId === uniqueId;
-                         const isHover = hoverId === uniqueId;
-                         const summonStats = spell.summonStats;
-                         return (
-                           <div key={uniqueId} className={`group bg-gray-800 p-2 rounded border transition-colors cursor-pointer ${isOpen ? 'border-blue-500 bg-gray-800' : 'border-gray-700 hover:border-blue-500'}`} onMouseEnter={() => handleMouseEnter(uniqueId)} onMouseLeave={handleMouseLeave} onClick={() => handleClickCard(uniqueId)}>
-                             <div className="flex justify-between items-center mb-1">
-                               <h3 className="font-bold text-sm text-blue-300 truncate">{spell.name}</h3>
-                               <div className="text-[10px] text-gray-400 whitespace-nowrap">{spell.castingTime}</div>
-                             </div>
-                             <div className="flex justify-between text-xs text-gray-400">
-                                <span>{spell.range}</span>
-                                {spell.damage && <span className="text-gray-300">{spell.damage}</span>}
-                             </div>
-                             {(isOpen || isHover) && (
-                               <div className="mt-2 pt-2 border-t border-gray-700 text-xs text-gray-300 animate-in fade-in slide-in-from-top-1 duration-300 cursor-auto">
-                                 {summonStats ? (
-                                   <div className="bg-gray-850 p-2 rounded border border-gray-600">
-                                     <div className="font-bold text-white mb-2 uppercase">{summonStats.name}</div>
-                                     <div className="flex justify-between mb-2 text-[10px] text-gray-300">
-                                       <span>AC {summonStats.ac}</span><span>HP {summonStats.hp}</span><span>Spd {summonStats.speed}</span>
-                                     </div>
-                                     <div className="grid grid-cols-6 gap-1 text-center text-[9px] text-gray-400 mb-2">
-                                       <div>STR<br/><span className="text-white">{summonStats.str}</span></div>
-                                       <div>DEX<br/><span className="text-white">{summonStats.dex}</span></div>
-                                       <div>CON<br/><span className="text-white">{summonStats.con}</span></div>
-                                       <div>INT<br/><span className="text-white">{summonStats.int}</span></div>
-                                       <div>WIS<br/><span className="text-white">{summonStats.wis}</span></div>
-                                       <div>CHA<br/><span className="text-white">{summonStats.cha}</span></div>
-                                     </div>
-                                     <div className="mt-2 pt-2 border-t border-gray-700" dangerouslySetInnerHTML={{ __html: spell.description }} />
-                                   </div>
-                                 ) : (<div dangerouslySetInnerHTML={{ __html: spell.description }} />)}
+                         {spellsByLevel[lvl].map((spell: any, sidx: number) => {
+                           const uniqueId = `spell-${lvl}-${sidx}`;
+                           const isOpen = expandedId === uniqueId;
+                           const summonStats = spell.summonStats;
+
+                           return (
+                             <div key={uniqueId} className={`group bg-gray-800 p-2 rounded border transition-colors cursor-pointer ${isOpen ? 'border-blue-500 bg-gray-800' : 'border-gray-700 hover:border-blue-500'}`} onClick={() => handleClickCard(uniqueId)}>
+                               <div className="flex justify-between items-center mb-1">
+                                 <h3 className="font-bold text-sm text-blue-300 truncate">{spell.name}</h3>
+                                 <div className="text-[10px] text-gray-400 whitespace-nowrap">{spell.castingTime}</div>
                                </div>
-                             )}
-                           </div>
-                         );
-                       })}
+                               <div className="flex justify-between text-xs text-gray-400">
+                                  <span>{spell.range}</span>
+                                  {spell.damage && <span className="text-gray-300">{spell.damage}</span>}
+                               </div>
+                               {isOpen && (
+                                 <div className="mt-2 pt-2 border-t border-gray-700 text-xs text-gray-300 animate-in fade-in slide-in-from-top-1 duration-300 cursor-auto">
+                                   {summonStats ? (
+                                     <div className="bg-gray-850 p-2 rounded border border-gray-600">
+                                       <div className="font-bold text-white mb-2 uppercase">{summonStats.name}</div>
+                                       <div className="flex justify-between mb-2 text-[10px] text-gray-300">
+                                         <span>AC {summonStats.ac}</span><span>HP {summonStats.hp}</span><span>Spd {summonStats.speed}</span>
+                                       </div>
+                                       <div className="grid grid-cols-6 gap-1 text-center text-[9px] text-gray-400 mb-2">
+                                         <div>STR<br/><span className="text-white">{summonStats.str}</span></div>
+                                         <div>DEX<br/><span className="text-white">{summonStats.dex}</span></div>
+                                         <div>CON<br/><span className="text-white">{summonStats.con}</span></div>
+                                         <div>INT<br/><span className="text-white">{summonStats.int}</span></div>
+                                         <div>WIS<br/><span className="text-white">{summonStats.wis}</span></div>
+                                         <div>CHA<br/><span className="text-white">{summonStats.cha}</span></div>
+                                       </div>
+                                       <div className="mt-2 pt-2 border-t border-gray-700" dangerouslySetInnerHTML={{ __html: spell.description }} />
+                                     </div>
+                                   ) : (<div dangerouslySetInnerHTML={{ __html: spell.description }} />)}
+                                 </div>
+                               )}
+                             </div>
+                           );
+                         })}
                        </div>
                      </div>
                    );
@@ -422,9 +422,8 @@ function App() {
                  getActions(character).filter(act => act.type === activeTab).map((action, idx) => {
                    const uniqueId = `action-${idx}`;
                    const isOpen = expandedId === uniqueId;
-                   const isHover = hoverId === uniqueId;
                    return (
-                     <div key={uniqueId} className={`group bg-gray-800 p-2 rounded border transition-colors cursor-pointer ${isOpen ? 'border-red-500 bg-gray-800' : 'border-gray-700 hover:border-red-500'}`} onMouseEnter={() => handleMouseEnter(uniqueId)} onMouseLeave={handleMouseLeave} onClick={() => handleClickCard(uniqueId)}>
+                     <div key={uniqueId} className={`group bg-gray-800 p-2 rounded border transition-colors cursor-pointer ${isOpen ? 'border-red-500 bg-gray-800' : 'border-gray-700 hover:border-red-500'}`} onClick={() => handleClickCard(uniqueId)}>
                        <div className="flex justify-between items-start">
                           <div className="font-bold text-sm text-white truncate pr-2">{action.name}</div>
                           {action.hitOrDc && <div className="text-xs text-red-300 font-mono whitespace-nowrap">{action.hitOrDc}</div>}
@@ -433,7 +432,7 @@ function App() {
                           <div className="text-xs text-gray-500 truncate w-2/3 italic">{action.attackType || action.source}</div>
                           {action.damage && <div className="text-xs text-gray-300">{action.damage}</div>}
                        </div>
-                       {(isOpen || isHover) && (
+                       {isOpen && (
                          <div className="mt-2 pt-2 border-t border-gray-700 text-xs text-gray-300 animate-in fade-in slide-in-from-top-1 duration-300 cursor-auto">
                             <div className="font-bold mb-1">{action.name}</div>
                             <div dangerouslySetInnerHTML={{ __html: action.description }} />
@@ -448,10 +447,10 @@ function App() {
                   : getActions(character).filter(act => act.type === activeTab).length === 0
                ) && <div className="text-center text-gray-500 py-6 text-xs italic">No {activeTab}s found.</div>}
             </div>
-          </>
+          </div>
         )}
         {sheetMode === 'inventory' && character && (
-          <div className="space-y-2 mt-2">
+          <div key="inventory" className="space-y-2 mt-2 animate-in fade-in duration-300">
             <h3 className="text-xs font-bold text-gray-500 uppercase">Equipment</h3>
             {getInventory(character).filter(i => i.type === 'Gear').map((item, idx) => (
               <div key={idx} className="bg-gray-800 p-2 rounded border border-gray-700 flex justify-between">
@@ -462,19 +461,18 @@ function App() {
           </div>
         )}
         {sheetMode === 'consumables' && character && (
-          <div className="space-y-2 mt-2">
+          <div key="consumables" className="space-y-2 mt-2 animate-in fade-in duration-300">
             <h3 className="text-xs font-bold text-gray-500 uppercase">Potions & Scrolls</h3>
             {getInventory(character).filter(i => i.type === 'Consumable').map((item, idx) => {
                const uniqueId = `item-${idx}`;
                const isOpen = expandedId === uniqueId;
-               const isHover = hoverId === uniqueId;
                return (
-                <div key={uniqueId} className="bg-gray-800 p-2 rounded border border-gray-700 group relative cursor-pointer hover:border-green-500" onMouseEnter={() => handleMouseEnter(uniqueId)} onMouseLeave={handleMouseLeave} onClick={() => handleClickCard(uniqueId)}>
+                <div key={uniqueId} className="bg-gray-800 p-2 rounded border border-gray-700 group relative cursor-pointer hover:border-green-500" onClick={() => handleClickCard(uniqueId)}>
                    <div className="flex justify-between">
                       <span className="text-sm font-bold text-green-300">{item.name}</span>
                       <span className="text-xs text-white bg-gray-700 px-1.5 rounded">x{item.quantity}</span>
                    </div>
-                   {(isOpen || isHover) && (
+                   {isOpen && (
                      <div className="mt-2 pt-2 border-t border-gray-700 text-xs text-gray-300 animate-in fade-in slide-in-from-top-1 duration-300 cursor-auto"><div dangerouslySetInnerHTML={{ __html: item.description }} /></div>
                    )}
                 </div>
