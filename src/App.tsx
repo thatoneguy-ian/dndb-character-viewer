@@ -319,9 +319,10 @@ function App() {
             </div>
 
             {/* NEW: Spell Slot Bar */}
-            {activeTab === 'Spell' && spellSlots.length > 0 && (
+            {activeTab === 'Spell' && (
               <div className="mb-3 px-2 py-1 text-xs bg-gray-800 border border-gray-700 rounded-md flex items-center gap-3 overflow-x-auto whitespace-nowrap">
-                {spellSlots.map((slot, idx) => {
+                {spellSlots.length > 0 ? (
+                  spellSlots.map((slot, idx) => {
                   const getOrdinal = (n: number) => {
                     if (n > 3 && n < 21) return `${n}th`;
                     switch (n % 10) {
@@ -331,14 +332,17 @@ function App() {
                       default: return `${n}th`;
                     }
                   };
-                  return (
-                    <div key={idx} className="flex items-center gap-2">
-                      <span className="font-bold text-blue-300">{slot.name || getOrdinal(slot.level)}:</span>
-                      <span className="text-white font-mono">{slot.max - slot.used}/{slot.max}</span>
-                      {idx < spellSlots.length - 1 && <span className="text-gray-600">|</span>}
-                    </div>
-                  );
-                })}
+                    return (
+                      <div key={idx} className="flex items-center gap-2">
+                        <span className="font-bold text-blue-300">{slot.name || getOrdinal(slot.level)}:</span>
+                        <span className="text-white font-mono">{( (slot.max ?? 0) - (slot.used ?? 0) )}/{slot.max ?? 0}</span>
+                        {idx < spellSlots.length - 1 && <span className="text-gray-600">|</span>}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-xs text-gray-400">No spell slots found for this character.</div>
+                )}
               </div>
             )}
 
