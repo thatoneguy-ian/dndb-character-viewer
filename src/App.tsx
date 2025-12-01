@@ -216,7 +216,7 @@ function App() {
                     <img src={p.avatar} className="w-12 h-12 rounded-full border-2 border-gray-700 object-cover" />
                     <button 
                       onClick={(e) => removePin(e, p.id)}
-                      className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center opacity-0 group-hover:opacity-100"
+                      className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center opacity-90"
                     >✕</button>
                  </div>
                ))}
@@ -292,7 +292,7 @@ function App() {
             </div>
 
             <div className="mb-3 border border-gray-800 rounded bg-gray-850">
-              <button onClick={() => setShowSkills(!showSkills)} className="w-full flex justify-between items-center p-2 text-xs font-bold text-gray-400 hover:bg-gray-800 hover:text-white">
+              <button onClick={() => setShowSkills(!showSkills)} className="w-full flex justify-between items-center p-2 text-xs font-bold text-gray-400">
                 <span>SKILLS</span>{showSkills ? <IconChevronUp /> : <IconChevronDown />}
               </button>
               <div className={`transition-all duration-300 ease-in-out overflow-hidden ${showSkills ? 'max-h-96' : 'max-h-0'}`}>
@@ -314,13 +314,13 @@ function App() {
 
             <div className="flex border-b border-gray-700 mb-3 sticky top-0 bg-gray-900 z-10 pt-2">
               {(["Action", "Bonus", "Reaction", "Other", "Spell"] as const).map((tab) => (
-                <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-wider transition-colors ${activeTab === tab ? "text-red-500 border-b-2 border-red-500" : "text-gray-500 hover:text-gray-300"}`}>{tab}</button>
+                <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-wider transition-colors ${activeTab === tab ? "text-red-500 border-b-2 border-red-500" : "text-gray-500"}`}>{tab}</button>
               ))}
             </div>
 
             {/* NEW: Spell Slot Bar */}
             {activeTab === 'Spell' && spellSlots.length > 0 && (
-              <div className="mb-3 px-2 py-1.5 text-xs text-center bg-gray-800 border border-gray-700 rounded-md flex flex-wrap justify-center items-center gap-x-3 gap-y-1">
+              <div className="mb-3 px-2 py-1 text-xs bg-gray-800 border border-gray-700 rounded-md flex items-center gap-3 overflow-x-auto whitespace-nowrap">
                 {spellSlots.map((slot, idx) => {
                   const getOrdinal = (n: number) => {
                     if (n > 3 && n < 21) return `${n}th`;
@@ -332,10 +332,8 @@ function App() {
                     }
                   };
                   return (
-                    <div key={idx} className="flex items-center gap-1.5">
-                      <span className="font-bold text-blue-300 whitespace-nowrap">
-                        {slot.name || getOrdinal(slot.level)}:
-                      </span>
+                    <div key={idx} className="flex items-center gap-2">
+                      <span className="font-bold text-blue-300">{slot.name || getOrdinal(slot.level)}:</span>
                       <span className="text-white font-mono">{slot.max - slot.used}/{slot.max}</span>
                       {idx < spellSlots.length - 1 && <span className="text-gray-600">|</span>}
                     </div>
@@ -352,7 +350,7 @@ function App() {
                     <button onClick={() => setShowAdvanced(!showAdvanced)} className={`text-[10px] px-2 py-1 rounded border ${showAdvanced ? 'bg-gray-700 border-gray-500 text-white' : 'border-gray-600 text-gray-400 hover:text-white'}`}>Filters {showAdvanced ? '▲' : '▼'}</button>
                  </div>
 
-                 <div className={`transition-all duration-300 ease-in-out overflow-hidden ${showAdvanced ? 'max-h-96' : 'max-h-0'}`}>
+                 <div className={`transition-all duration-500 ease-in-out overflow-hidden ${showAdvanced ? 'max-h-[600px]' : 'max-h-0'}`}>
                    <div className="bg-gray-800 p-2 rounded mb-3 border border-gray-700">
                      <div className="text-[9px] font-bold text-gray-500 uppercase mb-1">Spell Levels</div>
                      <div className="flex flex-wrap gap-1">
@@ -365,7 +363,7 @@ function App() {
               </div>
             )}
 
-            <div className="space-y-2 pb-4">
+            <div key={`tab-${activeTab}-${filters.attackOnly}-${filters.levels.join(',')}`} className="space-y-2 pb-4 animate-in fade-in duration-300">
                {activeTab === "Spell" ? (
                  Object.keys(spellsByLevel).sort((a,b) => Number(a)-Number(b)).map(levelKey => {
                    const lvl = Number(levelKey);
@@ -381,7 +379,7 @@ function App() {
                            const summonStats = spell.summonStats;
 
                            return (
-                             <div key={uniqueId} className={`group bg-gray-800 p-2 rounded border transition-colors cursor-pointer ${isOpen ? 'border-blue-500 bg-gray-800' : 'border-gray-700 hover:border-blue-500'}`} onClick={() => handleClickCard(uniqueId)}>
+                             <div key={uniqueId} className={`bg-gray-800 p-2 rounded border transition-colors cursor-pointer ${isOpen ? 'border-blue-500 bg-gray-800' : 'border-gray-700'}`} onClick={() => handleClickCard(uniqueId)}>
                                <div className="flex justify-between items-center mb-1">
                                  <h3 className="font-bold text-sm text-blue-300 truncate">{spell.name}</h3>
                                  <div className="text-[10px] text-gray-400 whitespace-nowrap">{spell.castingTime}</div>
@@ -423,7 +421,7 @@ function App() {
                    const uniqueId = `action-${idx}`;
                    const isOpen = expandedId === uniqueId;
                    return (
-                     <div key={uniqueId} className={`group bg-gray-800 p-2 rounded border transition-colors cursor-pointer ${isOpen ? 'border-red-500 bg-gray-800' : 'border-gray-700 hover:border-red-500'}`} onClick={() => handleClickCard(uniqueId)}>
+                     <div key={uniqueId} className={`bg-gray-800 p-2 rounded border transition-colors cursor-pointer ${isOpen ? 'border-red-500 bg-gray-800' : 'border-gray-700'}`} onClick={() => handleClickCard(uniqueId)}>
                        <div className="flex justify-between items-start">
                           <div className="font-bold text-sm text-white truncate pr-2">{action.name}</div>
                           {action.hitOrDc && <div className="text-xs text-red-300 font-mono whitespace-nowrap">{action.hitOrDc}</div>}
@@ -467,7 +465,7 @@ function App() {
                const uniqueId = `item-${idx}`;
                const isOpen = expandedId === uniqueId;
                return (
-                <div key={uniqueId} className="bg-gray-800 p-2 rounded border border-gray-700 group relative cursor-pointer hover:border-green-500" onClick={() => handleClickCard(uniqueId)}>
+                <div key={uniqueId} className="bg-gray-800 p-2 rounded border border-gray-700 relative cursor-pointer" onClick={() => handleClickCard(uniqueId)}>
                    <div className="flex justify-between">
                       <span className="text-sm font-bold text-green-300">{item.name}</span>
                       <span className="text-xs text-white bg-gray-700 px-1.5 rounded">x{item.quantity}</span>
@@ -484,12 +482,12 @@ function App() {
       </div>
       <div className="bg-gray-900 border-t border-gray-800 p-2 shrink-0 z-30">
          <div className="flex gap-3 items-center overflow-x-auto px-1">
-           <div onClick={() => setView('list')} className="cursor-pointer group flex flex-col items-center min-w-10">
-             <div className="w-10 h-10 rounded-full border-2 border-gray-600 border-dashed hover:border-white hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition-all"><IconSearch /></div>
+           <div onClick={() => setView('list')} className="cursor-pointer flex flex-col items-center min-w-10">
+             <div className="w-10 h-10 rounded-full border-2 border-gray-600 border-dashed flex items-center justify-center text-gray-400 transition-all"><IconSearch /></div>
            </div>
            {pinned.map((p) => (
-             <div key={p.id} onClick={() => { setCharId(p.id); fetchCharacter(p.id); }} className="cursor-pointer group relative flex flex-col items-center min-w-10">
-               <img src={p.avatar} className={`w-10 h-10 rounded-full border-2 object-cover transition-all ${p.id === charId ? 'border-red-500 scale-110' : 'border-gray-600 hover:border-gray-400 opacity-70 hover:opacity-100'}`} title={p.name} />
+             <div key={p.id} onClick={() => { setCharId(p.id); fetchCharacter(p.id); }} className="cursor-pointer relative flex flex-col items-center min-w-10">
+               <img src={p.avatar} className={`w-10 h-10 rounded-full border-2 object-cover transition-all ${p.id === charId ? 'border-red-500 scale-110' : 'border-gray-600 opacity-90'}`} title={p.name} />
                {p.id === charId && <div className="w-1 h-1 bg-red-500 rounded-full mt-1"></div>}
              </div>
            ))}
