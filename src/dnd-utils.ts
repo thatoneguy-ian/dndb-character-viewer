@@ -211,9 +211,11 @@ export function getSpellSlots(character: any): SpellSlot[] {
   // FIX: DDB sometimes uses 'available' instead of 'max'
   if (character.spellSlots) {
     character.spellSlots.forEach((slot: any) => {
-      const max = slot.max || slot.available || 0; 
-      if (max > 0) {
-        slots.push({ level: slot.level, used: slot.used, max: max });
+      const max = slot.max ?? slot.available ?? 0; 
+      const used = slot.used ?? 0;
+      // Always include slot entries even when max is zero so UI can show 0/0
+      if (typeof slot.level !== 'undefined') {
+        slots.push({ level: slot.level, used, max });
       }
     });
   }
@@ -222,9 +224,10 @@ export function getSpellSlots(character: any): SpellSlot[] {
   // FIX: Ensure we check available here too
   if (character.pactMagic) {
     character.pactMagic.forEach((slot: any) => {
-       const max = slot.max || slot.available || 0; 
-       if (max > 0) {
-         slots.push({ level: slot.level, used: slot.used, max: max, name: "Pact" });
+       const max = slot.max ?? slot.available ?? 0; 
+       const used = slot.used ?? 0;
+       if (typeof slot.level !== 'undefined') {
+         slots.push({ level: slot.level, used, max, name: "Pact" });
        }
     });
   }
