@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "D&D Quick View",
+  "version": "1.1",
+  "permissions": ["cookies", "storage", "sidePanel"],
+  "host_permissions": ["https://*.dndbeyond.com/*"],
+  "action": {
+    "default_title": "Open Character Sheet"
+  },
+  "side_panel": {
+    "default_path": "index.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}
