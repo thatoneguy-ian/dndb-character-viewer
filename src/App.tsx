@@ -41,6 +41,7 @@ function App() {
   
   const [showSkills, setShowSkills] = useState(false);
   const [skillSort, setSkillSort] = useState<'name'|'bonus'>('name');
+  const [showSlotDebug, setShowSlotDebug] = useState(false);
   
   // Filter State
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -232,7 +233,6 @@ function App() {
   const ac = character ? calculateAC(character) : 10;
   const skills = character ? getSkills(character).sort((a: Skill, b: Skill) => skillSort === 'name' ? a.name.localeCompare(b.name) : b.bonusValue - a.bonusValue) : [];
   const spellSlots = character ? getSpellSlots(character) : [];
-  const [showSlotDebug, setShowSlotDebug] = useState(false);
 
   // FILTER LOGIC
   const allSpells = character ? getSpells(character) : [];
