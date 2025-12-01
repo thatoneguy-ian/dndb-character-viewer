@@ -379,7 +379,15 @@ function App() {
                            const summonStats = spell.summonStats;
 
                            return (
-                             <div key={uniqueId} className={`bg-gray-800 p-2 rounded border transition-colors cursor-pointer ${isOpen ? 'border-blue-500 bg-gray-800' : 'border-gray-700'}`} onClick={() => handleClickCard(uniqueId)}>
+                             <div
+                               key={uniqueId}
+                               role="button"
+                               tabIndex={0}
+                               aria-expanded={isOpen}
+                               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClickCard(uniqueId); } }}
+                               className={`bg-gray-800 p-2 rounded border transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 ${isOpen ? 'border-blue-500 bg-gray-900' : 'border-gray-700'}`}
+                               onClick={() => handleClickCard(uniqueId)}
+                             >
                                <div className="flex justify-between items-center mb-1">
                                  <h3 className="font-bold text-sm text-blue-300 truncate">{spell.name}</h3>
                                  <div className="text-[10px] text-gray-400 whitespace-nowrap">{spell.castingTime}</div>
@@ -421,7 +429,15 @@ function App() {
                    const uniqueId = `action-${idx}`;
                    const isOpen = expandedId === uniqueId;
                    return (
-                     <div key={uniqueId} className={`bg-gray-800 p-2 rounded border transition-colors cursor-pointer ${isOpen ? 'border-red-500 bg-gray-800' : 'border-gray-700'}`} onClick={() => handleClickCard(uniqueId)}>
+                     <div
+                       key={uniqueId}
+                       role="button"
+                       tabIndex={0}
+                       aria-expanded={isOpen}
+                       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClickCard(uniqueId); } }}
+                       className={`bg-gray-800 p-2 rounded border transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500 ${isOpen ? 'border-red-500 bg-gray-900' : 'border-gray-700'}`}
+                       onClick={() => handleClickCard(uniqueId)}
+                     >
                        <div className="flex justify-between items-start">
                           <div className="font-bold text-sm text-white truncate pr-2">{action.name}</div>
                           {action.hitOrDc && <div className="text-xs text-red-300 font-mono whitespace-nowrap">{action.hitOrDc}</div>}
@@ -465,7 +481,15 @@ function App() {
                const uniqueId = `item-${idx}`;
                const isOpen = expandedId === uniqueId;
                return (
-                <div key={uniqueId} className="bg-gray-800 p-2 rounded border border-gray-700 relative cursor-pointer" onClick={() => handleClickCard(uniqueId)}>
+                <div
+                  key={uniqueId}
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={isOpen}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClickCard(uniqueId); } }}
+                  className="bg-gray-800 p-2 rounded border border-gray-700 relative cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500"
+                  onClick={() => handleClickCard(uniqueId)}
+                >
                    <div className="flex justify-between">
                       <span className="text-sm font-bold text-green-300">{item.name}</span>
                       <span className="text-xs text-white bg-gray-700 px-1.5 rounded">x{item.quantity}</span>
