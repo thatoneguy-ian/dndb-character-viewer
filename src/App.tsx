@@ -26,6 +26,7 @@ interface PinnedChar {
 interface FilterState {
   attackOnly: boolean;
   levels: number[];
+  tags?: string[];
 }
 
 function App() {
@@ -41,12 +42,14 @@ function App() {
   
   const [showSkills, setShowSkills] = useState(false);
   const [skillSort, setSkillSort] = useState<'name'|'bonus'>('name');
+  // const [showSlotDebug, setShowSlotDebug] = useState(false);
   
   // Filter State
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
     attackOnly: false,
     levels: []
+    , tags: []
   });
 
   const [expandedId, setExpandedId] = useState<string | null>(null); 
@@ -238,6 +241,9 @@ function App() {
   const filteredSpells = allSpells.filter(spell => {
     if (filters.attackOnly && !spell.damage && spell.hitOrDc === "") return false;
     if (filters.levels.length > 0 && !filters.levels.includes(spell.level)) return false;
+    if (filters.tags && filters.tags.length > 0) {
+      if (!spell.tags || !spell.tags.some((t: string) => filters.tags!.includes(t))) return false;
+    }
     return true;
   });
 
@@ -246,6 +252,13 @@ function App() {
     if (!spellsByLevel[s.level]) spellsByLevel[s.level] = [];
     spellsByLevel[s.level].push(s);
   });
+
+  // Collect all tags available in the spell list for filter UI
+  const allTags = Array.from(new Set(allSpells.flatMap(s => s.tags || []))).filter(Boolean).sort();
+
+  const toggleTagFilter = (tag: string) => {
+    setFilters(prev => ({ ...prev, tags: prev.tags?.includes(tag) ? prev.tags!.filter(t => t !== tag) : [...(prev.tags || []), tag] }));
+  };
 
   return (
     <div className="bg-gray-900 h-full w-full text-white relative flex flex-col overflow-hidden">
@@ -319,9 +332,12 @@ function App() {
             </div>
 
             {/* NEW: Spell Slot Bar */}
-            {activeTab === 'Spell' && spellSlots.length > 0 && (
-              <div className="mb-3 px-2 py-1 text-xs bg-gray-800 border border-gray-700 rounded-md flex items-center gap-3 overflow-x-auto whitespace-nowrap">
-                {spellSlots.map((slot, idx) => {
+            {activeTab === 'Spell' && (
+              <div className="mb-3 px-2 py-1 text-xs bg-gray-800 border border-gray-700 rounded-md flex items-center gap-3 flex-wrap">
+                {(() => {
+                  const visible = spellSlots.filter(s => !(s.max === 0 && (s.used ?? 0) === 0));
+                  if (visible.length === 0) return (<div className="text-xs text-gray-400">No spell slots found for this character.</div>);
+
                   const getOrdinal = (n: number) => {
                     if (n > 3 && n < 21) return `${n}th`;
                     switch (n % 10) {
@@ -331,16 +347,21 @@ function App() {
                       default: return `${n}th`;
                     }
                   };
-                  return (
-                    <div key={idx} className="flex items-center gap-2">
-                      <span className="font-bold text-blue-300">{slot.name || getOrdinal(slot.level)}:</span>
-                      <span className="text-white font-mono">{slot.max - slot.used}/{slot.max}</span>
-                      {idx < spellSlots.length - 1 && <span className="text-gray-600">|</span>}
-                    </div>
-                  );
-                })}
+
+                  return visible.map((slot, idx) => {
+                    const remaining = (slot.available ?? ((slot.max ?? 0) - (slot.used ?? 0)));
+                    return (
+                      <div key={idx} className="flex items-center gap-2 min-w-0">
+                        <span className="font-bold text-blue-300 text-[11px] truncate">{slot.name || getOrdinal(slot.level)}:</span>
+                        <span className="text-white font-mono text-[11px]">{remaining}/{slot.max ?? 0}</span>
+                        {idx < visible.length - 1 && <span className="hidden sm:inline text-gray-600">|</span>}
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             )}
+            
 
             {/* SPELL SLOTS & FILTERS (Only on Spell Tab) */}
             {activeTab === "Spell" && (
@@ -359,6 +380,15 @@ function App() {
                        ))}
                      </div>
                    </div>
+                     <div className="bg-gray-800 p-2 rounded mb-3 border border-gray-700">
+                       <div className="text-[9px] font-bold text-gray-500 uppercase mb-1">Tags</div>
+                       <div className="flex flex-wrap gap-1">
+                         {allTags.length === 0 && <div className="text-[11px] text-gray-400">No tags</div>}
+                         {allTags.map(tag => (
+                           <button key={tag} onClick={() => toggleTagFilter(tag)} className={`text-[10px] px-2 py-1 rounded border ${filters.tags?.includes(tag) ? 'bg-green-600 border-green-400 text-white' : 'border-gray-600 text-gray-400 hover:bg-gray-700'}`}>{tag}</button>
+                         ))}
+                       </div>
+                     </div>
                  </div>
               </div>
             )}
@@ -376,10 +406,19 @@ function App() {
                          {spellsByLevel[lvl].map((spell: any, sidx: number) => {
                            const uniqueId = `spell-${lvl}-${sidx}`;
                            const isOpen = expandedId === uniqueId;
+                           const hasTags = Array.isArray(spell.tags) && spell.tags.length > 0;
                            const summonStats = spell.summonStats;
 
                            return (
-                             <div key={uniqueId} className={`bg-gray-800 p-2 rounded border transition-colors cursor-pointer ${isOpen ? 'border-blue-500 bg-gray-800' : 'border-gray-700'}`} onClick={() => handleClickCard(uniqueId)}>
+                             <div
+                               key={uniqueId}
+                               role="button"
+                               tabIndex={0}
+                               aria-expanded={isOpen}
+                               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClickCard(uniqueId); } }}
+                               className={`relative bg-gray-800 p-2 rounded border transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 ${isOpen ? 'border-blue-500 bg-gray-900' : 'border-gray-700'}`}
+                               onClick={() => handleClickCard(uniqueId)}
+                             >
                                <div className="flex justify-between items-center mb-1">
                                  <h3 className="font-bold text-sm text-blue-300 truncate">{spell.name}</h3>
                                  <div className="text-[10px] text-gray-400 whitespace-nowrap">{spell.castingTime}</div>
@@ -388,8 +427,19 @@ function App() {
                                   <span>{spell.range}</span>
                                   {spell.damage && <span className="text-gray-300">{spell.damage}</span>}
                                </div>
+                               {/* Tags (bottom-right) */}
+                               {spell.tags && spell.tags.length > 0 && (
+                                 <div className="absolute bottom-2 right-2 flex gap-1 items-end">
+                                   {spell.tags.slice(0,3).map((t: string, i: number) => (
+                                     <span key={i} className="text-[10px] px-2 py-0.5 rounded bg-gray-700 text-gray-200 whitespace-nowrap">{t}</span>
+                                   ))}
+                                   {spell.tags.length > 3 && (
+                                     <span title={spell.tags.join(', ')} className="text-[10px] px-2 py-0.5 rounded bg-gray-700 text-gray-200 cursor-help">...</span>
+                                   )}
+                                 </div>
+                               )}
                                {isOpen && (
-                                 <div className="mt-2 pt-2 border-t border-gray-700 text-xs text-gray-300 animate-in fade-in slide-in-from-top-1 duration-300 cursor-auto">
+                                 <div className={`mt-2 pt-2 border-t border-gray-700 text-xs text-gray-300 animate-in fade-in slide-in-from-top-1 duration-300 cursor-auto ${hasTags ? 'pb-8' : ''}`}>
                                    {summonStats ? (
                                      <div className="bg-gray-850 p-2 rounded border border-gray-600">
                                        <div className="font-bold text-white mb-2 uppercase">{summonStats.name}</div>
@@ -421,7 +471,15 @@ function App() {
                    const uniqueId = `action-${idx}`;
                    const isOpen = expandedId === uniqueId;
                    return (
-                     <div key={uniqueId} className={`bg-gray-800 p-2 rounded border transition-colors cursor-pointer ${isOpen ? 'border-red-500 bg-gray-800' : 'border-gray-700'}`} onClick={() => handleClickCard(uniqueId)}>
+                     <div
+                       key={uniqueId}
+                       role="button"
+                       tabIndex={0}
+                       aria-expanded={isOpen}
+                       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClickCard(uniqueId); } }}
+                       className={`bg-gray-800 p-2 rounded border transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500 ${isOpen ? 'border-red-500 bg-gray-900' : 'border-gray-700'}`}
+                       onClick={() => handleClickCard(uniqueId)}
+                     >
                        <div className="flex justify-between items-start">
                           <div className="font-bold text-sm text-white truncate pr-2">{action.name}</div>
                           {action.hitOrDc && <div className="text-xs text-red-300 font-mono whitespace-nowrap">{action.hitOrDc}</div>}
@@ -465,7 +523,15 @@ function App() {
                const uniqueId = `item-${idx}`;
                const isOpen = expandedId === uniqueId;
                return (
-                <div key={uniqueId} className="bg-gray-800 p-2 rounded border border-gray-700 relative cursor-pointer" onClick={() => handleClickCard(uniqueId)}>
+                <div
+                  key={uniqueId}
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={isOpen}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClickCard(uniqueId); } }}
+                  className="bg-gray-800 p-2 rounded border border-gray-700 relative cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500"
+                  onClick={() => handleClickCard(uniqueId)}
+                >
                    <div className="flex justify-between">
                       <span className="text-sm font-bold text-green-300">{item.name}</span>
                       <span className="text-xs text-white bg-gray-700 px-1.5 rounded">x{item.quantity}</span>

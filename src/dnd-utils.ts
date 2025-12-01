@@ -201,35 +201,96 @@ export interface SpellSlot {
   level: number;
   used: number;
   max: number;
+  available?: number;
   name?: string; // For "Pact"
 }
 
 export function getSpellSlots(character: any): SpellSlot[] {
-  const slots: SpellSlot[] = [];
+  const map: Record<number, { used: number; maxSum: number; availableSum: number; sources: Set<string> }> = {};
 
-  // 1. Standard Slots
-  // FIX: DDB sometimes uses 'available' instead of 'max'
-  if (character.spellSlots) {
+  const addSlot = (lvl: number, used: number, maxProvided: number | null, availableProvided: number | null, source?: string) => {
+    if (typeof lvl === 'undefined' || lvl === null) return;
+    const level = Number(lvl);
+    if (!map[level]) map[level] = { used: 0, maxSum: 0, availableSum: 0, sources: new Set() };
+    map[level].used += (used ?? 0);
+    if (typeof maxProvided === 'number') map[level].maxSum += maxProvided;
+    if (typeof availableProvided === 'number') map[level].availableSum += availableProvided;
+    if (source) map[level].sources.add(source);
+  };
+
+  if (character.spellSlots && Array.isArray(character.spellSlots)) {
     character.spellSlots.forEach((slot: any) => {
-      const max = slot.max || slot.available || 0; 
-      if (max > 0) {
-        slots.push({ level: slot.level, used: slot.used, max: max });
-      }
+      const used = slot.used ?? 0;
+      const maxProvided = typeof slot.max === 'number' ? slot.max : null;
+      const availableProvided = typeof slot.available === 'number' ? slot.available : null;
+      addSlot(slot.level, used, maxProvided, availableProvided, 'Standard');
     });
   }
 
-  // 2. Pact Magic (Warlock)
-  // FIX: Ensure we check available here too
-  if (character.pactMagic) {
+  if (character.pactMagic && Array.isArray(character.pactMagic)) {
     character.pactMagic.forEach((slot: any) => {
-       const max = slot.max || slot.available || 0; 
-       if (max > 0) {
-         slots.push({ level: slot.level, used: slot.used, max: max, name: "Pact" });
-       }
+      const used = slot.used ?? 0;
+      const maxProvided = typeof slot.max === 'number' ? slot.max : null;
+      const availableProvided = typeof slot.available === 'number' ? slot.available : null;
+      addSlot(slot.level, used, maxProvided, availableProvided, 'Pact');
     });
   }
 
-  return slots.sort((a, b) => a.level - b.level);
+  // Precompute total level for multiclass fallback
+  const totalLevel = (character && Array.isArray(character.classes)) ? character.classes.reduce((s: number, c: any) => s + (c.level || 0), 0) : 0;
+
+  // Prefer class-level spellRules if available (use that class' level to index the table).
+  // Fallback to character.spellRules (multiclass combined) indexed by totalLevel.
+  let ruleRow: any[] | null = null;
+  if (character && Array.isArray(character.classes)) {
+    const casterClass = character.classes.find((c: any) => c.definition && c.definition.spellRules && Array.isArray(c.definition.spellRules.levelSpellSlots));
+    if (casterClass) {
+      const table = casterClass.definition.spellRules.levelSpellSlots;
+      const idx = Math.min(Math.max(0, casterClass.level || 0), table.length - 1);
+      ruleRow = table[idx];
+    }
+  }
+
+  if (!ruleRow) {
+    const levelSpellSlotsTable = character?.spellRules?.levelSpellSlots;
+    if (Array.isArray(levelSpellSlotsTable) && levelSpellSlotsTable.length > 0) {
+      const idx = Math.min(Math.max(0, totalLevel), levelSpellSlotsTable.length - 1);
+      ruleRow = levelSpellSlotsTable[idx];
+    }
+  }
+
+  // If a ruleRow exists but the payload didn't include entries for some levels,
+  // seed empty entries so we still report those levels (with 0 used/available)
+  if (ruleRow && Array.isArray(ruleRow)) {
+    const maxSpellLevel = ruleRow.length; // typically 9
+    for (let lvl = 1; lvl <= maxSpellLevel; lvl++) {
+      if (!map[lvl]) map[lvl] = { used: 0, maxSum: 0, availableSum: 0, sources: new Set() };
+    }
+  }
+
+  const slots: SpellSlot[] = Object.keys(map).map(k => {
+    const lvl = Number(k);
+    const entry = map[lvl];
+    // Use rule table only for spell levels >= 1 (cantrips are level 0 and not in rule arrays)
+    const ruleMaxForLevel = (ruleRow && lvl >= 1 && Array.isArray(ruleRow)) ? Number(ruleRow[lvl - 1] ?? 0) : 0;
+
+    // Final max: prefer explicit maxSum, else rule table value, else availableSum + used, else used
+    let finalMax = 0;
+    if (entry.maxSum > 0) finalMax = entry.maxSum;
+    else if (ruleMaxForLevel > 0) finalMax = ruleMaxForLevel;
+    else if (entry.availableSum > 0) finalMax = entry.availableSum + entry.used;
+    else finalMax = entry.used;
+
+    // Final available: prefer availableSum, else compute from finalMax - used
+    let finalAvailable = 0;
+    if (entry.availableSum > 0) finalAvailable = entry.availableSum;
+    else finalAvailable = Math.max(0, finalMax - entry.used);
+
+    const name = entry.sources.has('Pact') && !entry.sources.has('Standard') ? 'Pact' : undefined;
+    return { level: lvl, used: entry.used, max: finalMax, available: finalAvailable, name };
+  }).sort((a,b) => a.level - b.level);
+
+  return slots;
 }
 
 // --- ACTIONS ---
@@ -315,9 +376,32 @@ export function getActions(character: any): Action[] {
           modToUse = dexMod;
         }
 
-        // FIX: Use Override OR Magic
-        const itemBonus = Number(def.attackBonus) || Number(def.magic) || 0;
-        
+        // Compute item bonus defensively: prefer explicit numeric fields.
+        let itemBonus = 0;
+        if (def.attackBonus != null && def.attackBonus !== '') {
+          const n = Number(def.attackBonus);
+          if (!Number.isNaN(n)) itemBonus = n;
+        } else if (typeof def.enhancement === 'number' && !Number.isNaN(def.enhancement)) {
+          itemBonus = Number(def.enhancement);
+        } else if (typeof def.enhancementBonus === 'number' && !Number.isNaN(def.enhancementBonus)) {
+          itemBonus = Number(def.enhancementBonus);
+        } else {
+          itemBonus = 0; // `def.magic === true` is a metadata flag, not a numeric +1
+        }
+
+        // Add any explicit grantedModifiers that provide numeric attack bonuses
+        if (Array.isArray(def.grantedModifiers)) {
+          def.grantedModifiers.forEach((m: any) => {
+            if (m && m.type === 'bonus' && typeof m.value === 'number' && !Number.isNaN(m.value)) {
+              // Only include if the modifier is likely an attack bonus (subType may vary across payloads)
+              const sub = (m.subType || '').toLowerCase();
+              if (sub.includes('attack') || sub.includes('to-hit') || sub.includes('attack-roll') || sub === '') {
+                itemBonus += Number(m.value);
+              }
+            }
+          });
+        }
+
         const toHit = profBonus + modToUse + itemBonus;
         const hitString = `+${toHit}`;
 
@@ -370,6 +454,7 @@ export interface Spell {
   hitOrDc: string;
   damage: string;
   attackType: string;
+  tags?: string[];
   // NEW: Pre-calculated summon stats
   summonStats?: SummonStats | null; 
 }
@@ -416,6 +501,7 @@ export function getSpells(character: any): Spell[] {
         hitOrDc: hit,
         damage: dmg,
         attackType: attackType,
+        tags: tags,
         summonStats: summonData
       });
     });
