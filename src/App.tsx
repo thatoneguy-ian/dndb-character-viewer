@@ -232,6 +232,7 @@ function App() {
   const ac = character ? calculateAC(character) : 10;
   const skills = character ? getSkills(character).sort((a: Skill, b: Skill) => skillSort === 'name' ? a.name.localeCompare(b.name) : b.bonusValue - a.bonusValue) : [];
   const spellSlots = character ? getSpellSlots(character) : [];
+  const [showSlotDebug, setShowSlotDebug] = useState(false);
 
   // FILTER LOGIC
   const allSpells = character ? getSpells(character) : [];
@@ -321,6 +322,9 @@ function App() {
             {/* NEW: Spell Slot Bar */}
             {activeTab === 'Spell' && (
               <div className="mb-3 px-2 py-1 text-xs bg-gray-800 border border-gray-700 rounded-md flex items-center gap-3 overflow-x-auto whitespace-nowrap">
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setShowSlotDebug(s => !s)} className="text-[10px] px-2 py-1 rounded border border-gray-600 text-gray-400 hover:text-white">{showSlotDebug ? 'Hide Debug' : 'Show Debug'}</button>
+                </div>
                 {spellSlots.length > 0 ? (
                   spellSlots.map((slot, idx) => {
                   const getOrdinal = (n: number) => {
@@ -343,6 +347,12 @@ function App() {
                 ) : (
                   <div className="text-xs text-gray-400">No spell slots found for this character.</div>
                 )}
+              </div>
+            )}
+            {showSlotDebug && character && (
+              <div className="mt-2 p-2 bg-gray-900 border border-gray-700 rounded text-xs text-gray-200 overflow-auto max-h-48">
+                <div className="font-bold text-xs text-gray-400 mb-1">Debug: Parsed Spell Slot Data</div>
+                <pre className="whitespace-pre-wrap text-[11px]">{JSON.stringify({ spellSlots, characterSpellSlots: character.spellSlots, characterPactMagic: character.pactMagic }, null, 2)}</pre>
               </div>
             )}
 
