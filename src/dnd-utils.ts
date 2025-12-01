@@ -12,7 +12,9 @@ export function getClasses(character: any): string[] {
 
 function getStatValue(character: any, statId: number): number {
   if (!character.stats) return 10;
+  // Loose equality (==) handles string/number mismatches
   let score = character.stats.find((s: any) => s.id == statId)?.value || 10;
+  
   const allModifiers = getAllModifiers(character);
   allModifiers.forEach((mod: any) => {
     if (mod.type === "bonus" && mod.entityId == statId) score += mod.value;
@@ -43,43 +45,6 @@ export function getModString(score: number): string {
   return mod >= 0 ? `+${mod}` : `${mod}`;
 }
 
-// --- SPELL SLOTS ---
-export interface SpellSlot {
-  level: number;
-  used: number;
-  max: number;
-  name?: string; // For "Pact"
-}
-
-export function getSpellSlots(character: any): SpellSlot[] {
-  const slots: SpellSlot[] = [];
-
-  // 1. Standard Slots (DDB usually provides 'spellSlots' array in data)
-  // Note: DDB JSON structure for slots varies. Often it's inside classes or derived.
-  // Since we don't have a full spell engine, we rely on 'character.spellSlots' if it exists, 
-  // or we parse 'character.classes' override logic. 
-  // *Fallback*: For this Quick View, we will try to grab the array if DDB provides it.
-  
-  if (character.spellSlots) {
-    character.spellSlots.forEach((slot: any) => {
-      if (slot.max > 0) {
-        slots.push({ level: slot.level, used: slot.used, max: slot.max });
-      }
-    });
-  }
-
-  // 2. Pact Magic (Warlock)
-  if (character.pactMagic) {
-    character.pactMagic.forEach((slot: any) => {
-       if (slot.max > 0) {
-         slots.push({ level: slot.level, used: slot.used, max: slot.max, name: "Pact" });
-       }
-    });
-  }
-
-  return slots.sort((a, b) => a.level - b.level);
-}
-
 // --- SUMMON PARSING ---
 export interface SummonStats {
   name: string;
@@ -94,7 +59,8 @@ export interface SummonStats {
   cha: string;
 }
 
-export function parseSummonStats(description: string): SummonStats | null {
+// Helper function (used internally by getSpells)
+function parseSummonStats(description: string): SummonStats | null {
   if (!description) return null;
   const text = description.replace(/<[^>]*>/g, ' ');
   
@@ -230,6 +196,42 @@ export function calculateAC(character: any): number {
   return ac;
 }
 
+// --- SPELL SLOTS ---
+export interface SpellSlot {
+  level: number;
+  used: number;
+  max: number;
+  name?: string; // For "Pact"
+}
+
+export function getSpellSlots(character: any): SpellSlot[] {
+  const slots: SpellSlot[] = [];
+
+  // 1. Standard Slots
+  // FIX: DDB sometimes uses 'available' instead of 'max'
+  if (character.spellSlots) {
+    character.spellSlots.forEach((slot: any) => {
+      const max = slot.max || slot.available || 0; 
+      if (max > 0) {
+        slots.push({ level: slot.level, used: slot.used, max: max });
+      }
+    });
+  }
+
+  // 2. Pact Magic (Warlock)
+  // FIX: Ensure we check available here too
+  if (character.pactMagic) {
+    character.pactMagic.forEach((slot: any) => {
+       const max = slot.max || slot.available || 0; 
+       if (max > 0) {
+         slots.push({ level: slot.level, used: slot.used, max: max, name: "Pact" });
+       }
+    });
+  }
+
+  return slots.sort((a, b) => a.level - b.level);
+}
+
 // --- ACTIONS ---
 export interface Action {
   id: string;
@@ -313,9 +315,8 @@ export function getActions(character: any): Action[] {
           modToUse = dexMod;
         }
 
-        const attackBonus = Number(def.attackBonus) || 0;
-        const magic = Number(def.magic) || 0;
-        const itemBonus = attackBonus !== 0 ? attackBonus : magic;
+        // FIX: Use Override OR Magic
+        const itemBonus = Number(def.attackBonus) || Number(def.magic) || 0;
         
         const toHit = profBonus + modToUse + itemBonus;
         const hitString = `+${toHit}`;
@@ -369,6 +370,8 @@ export interface Spell {
   hitOrDc: string;
   damage: string;
   attackType: string;
+  // NEW: Pre-calculated summon stats
+  summonStats?: SummonStats | null; 
 }
 
 const PREPARED_CASTERS = ["Cleric", "Druid", "Wizard", "Paladin", "Artificer"];
@@ -398,6 +401,9 @@ export function getSpells(character: any): Spell[] {
       if (def.attackType === 2) attackType = "Ranged Spell";
       if (def.saveDcAbilityId) attackType = "Save";
 
+      // OPTIMIZATION: Parse Summons ONCE here
+      const summonData = parseSummonStats(def.description || "");
+
       spells.push({
         name: def.name,
         level: def.level,
@@ -409,7 +415,8 @@ export function getSpells(character: any): Spell[] {
         source: safeSource,
         hitOrDc: hit,
         damage: dmg,
-        attackType: attackType
+        attackType: attackType,
+        summonStats: summonData
       });
     });
   };
@@ -426,7 +433,6 @@ export function getSpells(character: any): Spell[] {
     processSpells(character.spells.item, "Item");
   }
 
-  // Default Sort: Level then Name
   return spells.sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
 }
 

@@ -12,8 +12,7 @@ import {
   calculateAC,
   getSkills,
   getSpellSlots, // Ensure this is imported
-  type Skill,
-  parseSummonStats
+  type Skill
 } from './dnd-utils';
 
 interface PinnedChar {
@@ -380,7 +379,7 @@ function App() {
                          const uniqueId = `spell-${lvl}-${idx}`;
                          const isOpen = expandedId === uniqueId;
                          const isHover = hoverId === uniqueId;
-                         const summonStats = parseSummonStats(spell.description);
+                         const summonStats = spell.summonStats;
                          return (
                            <div key={uniqueId} className={`group bg-gray-800 p-2 rounded border transition-colors cursor-pointer ${isOpen ? 'border-blue-500 bg-gray-800' : 'border-gray-700 hover:border-blue-500'}`} onMouseEnter={() => handleMouseEnter(uniqueId)} onMouseLeave={handleMouseLeave} onClick={() => handleClickCard(uniqueId)}>
                              <div className="flex justify-between items-center mb-1">
