@@ -14,6 +14,7 @@ import {
   getSpellSlots, // Ensure this is imported
   type Skill
 } from './dnd-utils';
+import ConditionIcon from './components/conditions';
 
 interface PinnedChar {
   id: string;
@@ -304,7 +305,7 @@ function App() {
                ))}
             </div>
 
-            <div className="mb-3 border border-gray-800 rounded bg-gray-850">
+            <div className="mb-1 border border-gray-800 rounded bg-gray-850">
               <button onClick={() => setShowSkills(!showSkills)} className="w-full flex justify-between items-center p-2 text-xs font-bold text-gray-400">
                 <span>SKILLS</span>{showSkills ? <IconChevronUp /> : <IconChevronDown />}
               </button>
@@ -321,18 +322,18 @@ function App() {
                       </div>
                     ))}
                   </div>
-                  {/* CONDITIONS: icons-only row under Skills */}
-                  <ConditionsRow character={character} />
                 </div>
               </div>
             </div>
-
+            {/* CONDITIONS: icons-only row under Skills */}
+            <div className="flex mb-0 sticky top-0 bg-gray-900 z-10 pt-0 pb-0">
+              <ConditionsRow character={character} />
+            </div>
             <div className="flex border-b border-gray-700 mb-3 sticky top-0 bg-gray-900 z-10 pt-2">
               {(["Action", "Bonus", "Reaction", "Other", "Spell"] as const).map((tab) => (
                 <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-wider transition-colors ${activeTab === tab ? "text-red-500 border-b-2 border-red-500" : "text-gray-500"}`}>{tab}</button>
               ))}
             </div>
-
             {/* NEW: Spell Slot Bar */}
             {activeTab === 'Spell' && (
               <div className="mb-3 px-2 py-1 text-xs bg-gray-800 border border-gray-700 rounded-md flex items-center gap-3 flex-wrap">
@@ -638,7 +639,7 @@ function ConditionsRow({ character }: { character: any }) {
             aria-label={c.label}
             className="w-7 h-7 rounded flex items-center justify-center bg-gray-800 border border-gray-700 text-xl hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <span aria-hidden>{c.emoji}</span>
+            <ConditionIcon name={c.key} title={c.label} className="w-5 h-5 text-white" />
           </button>
         ))}
       </div>
