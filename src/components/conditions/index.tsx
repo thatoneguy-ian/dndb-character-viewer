@@ -69,7 +69,7 @@ export function ConditionIcon({ name, className, title }: { name: string } & Ico
 
   // fallback to loading the raw asset (keeps backwards compatibility)
   const fileName = key;
-  const src = new URL(`../../assets/conditions/${fileName}.svg`, import.meta.url).href;
+  const src = new URL(`../../assets/raw-svg/${fileName}.svg`, import.meta.url).href;
   return (
     <img
       src={src}

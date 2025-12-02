@@ -14,6 +14,9 @@ dist-ssr
 
 # Editor directories and files
 .vscode/*
+ 
+# raw svg assets (kept locally for editing, not tracked)
+src/assets/raw-svg/
 !.vscode/extensions.json
 .idea
 .DS_Store

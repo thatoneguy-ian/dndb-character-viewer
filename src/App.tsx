@@ -629,7 +629,10 @@ function ConditionsRow({ character }: { character: any }) {
 
   return (
     <div className="mt-2">
-      <div className="text-[9px] font-bold text-gray-500 uppercase mb-1">Conditions</div>
+      <div className="flex items-center gap-2 mb-1">
+        <div className="text-[9px] font-bold text-gray-500 uppercase">Conditions</div>
+        <span className="ml-1 inline-flex items-center justify-center bg-red-600 text-[10px] font-bold text-white px-2 py-0.5 rounded-full" aria-label={`${activeDefs.length} active conditions`}>{activeDefs.length}</span>
+      </div>
       <div className="flex gap-2 items-center" aria-hidden={false}>
         {activeDefs.map((c) => (
           <button
