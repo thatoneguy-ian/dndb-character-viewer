@@ -1,0 +1,13 @@
+import * as React from 'react';
+
+export function ActionIcon(props: React.SVGProps<SVGSVGElement> & { title?: string }) {
+  const { title, ...rest } = props as React.SVGProps<SVGSVGElement> & { title?: string };
+  return (
+    <svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="currentColor" {...rest}>
+      {title ? <title>{title}</title> : null}
+      <path d="m50 0c-27.555 0-50 22.445-50 50s22.445 50 50 50 50-22.445 50-50-22.445-50-50-50zm0 10c22.151 0 40 17.849 40 40s-17.849 40-40 40-40-17.849-40-40 17.849-40 40-40zm-7.7266 13.707-18.568 50.182h12.986l3.2031-9.1348h20.193l3.1992 9.0918 12.951-0.01953-18.547-50.119h-7.709zm7.6953 11.99 6.8809 19.797h-13.736z" />
+    </svg>
+  );
+}
+
+export default ActionIcon;

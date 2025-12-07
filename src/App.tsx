@@ -15,6 +15,7 @@ import {
   type Skill
 } from './dnd-utils';
 import ConditionIcon from './components/conditions';
+import { SCHOOL_ICON_MAP, ActionIcon, BonusActionIcon, ReactionIcon, ConcentrationIcon } from './components/spell-icons';
 
 interface PinnedChar {
   id: string;
@@ -52,6 +53,9 @@ function App() {
     levels: []
     , tags: []
   });
+
+  // Quick filter state: casting time & concentration
+  const [quickFilters, setQuickFilters] = useState<{ castingTime: Set<string>; concentration: boolean | null }>({ castingTime: new Set(), concentration: null });
 
   const [expandedId, setExpandedId] = useState<string | null>(null); 
 
@@ -245,6 +249,16 @@ function App() {
     if (filters.tags && filters.tags.length > 0) {
       if (!spell.tags || !spell.tags.some((t: string) => filters.tags!.includes(t))) return false;
     }
+    // Quick filter: concentration
+    if (quickFilters.concentration === true) {
+      if (!spell.components || !spell.components.toLowerCase().includes('concentration')) return false;
+    }
+    // Quick filter: casting time (use canonical castingType when available)
+    if (quickFilters.castingTime && quickFilters.castingTime.size > 0) {
+      const st = (spell.castingType || 'Other');
+      const matches = Array.from(quickFilters.castingTime).some(k => st.toLowerCase() === k.toLowerCase());
+      if (!matches) return false;
+    }
     return true;
   });
 
@@ -256,6 +270,17 @@ function App() {
 
   // Collect all tags available in the spell list for filter UI
   const allTags = Array.from(new Set(allSpells.flatMap(s => s.tags || []))).filter(Boolean).sort();
+
+
+  const toggleCastingFilter = (ct: string) => {
+    setQuickFilters(prev => {
+      const next = new Set(prev.castingTime);
+      if (next.has(ct)) next.delete(ct); else next.add(ct);
+      return { ...prev, castingTime: next };
+    });
+  };
+
+  const toggleConcentrationFilter = () => setQuickFilters(prev => ({ ...prev, concentration: prev.concentration === true ? null : true }));
 
   const toggleTagFilter = (tag: string) => {
     setFilters(prev => ({ ...prev, tags: prev.tags?.includes(tag) ? prev.tags!.filter(t => t !== tag) : [...(prev.tags || []), tag] }));
@@ -371,7 +396,15 @@ function App() {
               <div className="mb-4">
                  <div className="flex justify-between items-center mb-2">
                     <button onClick={() => setFilters(f => ({ ...f, attackOnly: !f.attackOnly }))} className={`text-[10px] px-2 py-1 rounded border ${filters.attackOnly ? 'bg-red-900/50 border-red-500 text-red-200' : 'border-gray-600 text-gray-400 hover:text-white'}`}>⚔️ Attacks Only</button>
-                    <button onClick={() => setShowAdvanced(!showAdvanced)} className={`text-[10px] px-2 py-1 rounded border ${showAdvanced ? 'bg-gray-700 border-gray-500 text-white' : 'border-gray-600 text-gray-400 hover:text-white'}`}>Filters {showAdvanced ? '▲' : '▼'}</button>
+                    <div className="flex items-center gap-2">
+                      <div className="flex gap-1 items-center" aria-hidden>
+                        <button onClick={() => toggleCastingFilter('Action')} title="Action spells only" className="w-8 h-8 rounded flex items-center justify-center bg-gray-800 border border-gray-700 text-white hover:bg-gray-700"><ActionIcon title="Action" className="w-5 h-5" /></button>
+                        <button onClick={() => toggleCastingFilter('Bonus')} title="Bonus Action spells only" className="w-8 h-8 rounded flex items-center justify-center bg-gray-800 border border-gray-700 text-white hover:bg-gray-700"><BonusActionIcon title="Bonus" className="w-5 h-5" /></button>
+                        <button onClick={() => toggleCastingFilter('Reaction')} title="Reaction spells only" className="w-8 h-8 rounded flex items-center justify-center bg-gray-800 border border-gray-700 text-white hover:bg-gray-700"><ReactionIcon title="Reaction" className="w-5 h-5" /></button>
+                        <button onClick={() => setFilters(f => ({ ...f, levels: [] }))} title="Clear levels" className="w-8 h-8 rounded flex items-center justify-center bg-gray-800 border border-gray-700 text-gray-400 hover:bg-gray-700">✕</button>
+                      </div>
+                      <button onClick={() => setShowAdvanced(!showAdvanced)} className={`text-[10px] px-2 py-1 rounded border ${showAdvanced ? 'bg-gray-700 border-gray-500 text-white' : 'border-gray-600 text-gray-400 hover:text-white'}`}>Filters {showAdvanced ? '▲' : '▼'}</button>
+                    </div>
                  </div>
 
                  <div className={`transition-all duration-500 ease-in-out overflow-hidden ${showAdvanced ? 'max-h-[600px]' : 'max-h-0'}`}>
@@ -392,6 +425,13 @@ function App() {
                          ))}
                        </div>
                      </div>
+                    <div className="bg-gray-800 p-2 rounded mb-3 border border-gray-700">
+                      <div className="text-[9px] font-bold text-gray-500 uppercase mb-1">Quick Filters</div>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => toggleConcentrationFilter()} title="Concentration only" className={`w-8 h-8 rounded flex items-center justify-center ${quickFilters.concentration ? 'bg-blue-600 border-blue-400 text-white' : 'bg-gray-800 border-gray-700 text-gray-300'}`}><ConcentrationIcon title="Concentration" className="w-5 h-5" /></button>
+                        <div className="text-xs text-gray-400">Casting Time Filters are at the top</div>
+                      </div>
+                    </div>
                  </div>
               </div>
             )}
@@ -423,8 +463,14 @@ function App() {
                                onClick={() => handleClickCard(uniqueId)}
                              >
                                <div className="flex justify-between items-center mb-1">
-                                 <h3 className="font-bold text-sm text-blue-300 truncate">{spell.name}</h3>
-                                 <div className="text-[10px] text-gray-400 whitespace-nowrap">{spell.castingTime}</div>
+                                              <div className="flex items-center gap-2 min-w-0">
+                                                {(() => {
+                                                  const IconComp = SCHOOL_ICON_MAP[spell.school] as any;
+                                                  return IconComp ? <IconComp title={spell.school} className="w-4 h-4 text-blue-300 flex-shrink-0" /> : null;
+                                                })()}
+                                                <h3 className="font-bold text-sm text-blue-300 truncate">{spell.name}</h3>
+                                              </div>
+                                              <div className="text-[10px] text-gray-400 whitespace-nowrap">{spell.castingTime}</div>
                                </div>
                                <div className="flex justify-between text-xs text-gray-400">
                                   <span>{spell.range}</span>

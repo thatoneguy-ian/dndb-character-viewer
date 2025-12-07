@@ -447,6 +447,7 @@ export interface Spell {
   level: number;
   school: string;
   castingTime: string;
+  castingType?: 'Action' | 'Bonus' | 'Reaction' | 'Other';
   range: string;
   components: string;
   description: string;
@@ -486,6 +487,18 @@ export function getSpells(character: any): Spell[] {
       if (def.attackType === 2) attackType = "Ranged Spell";
       if (def.saveDcAbilityId) attackType = "Save";
 
+      // Determine canonical casting type for robust filtering
+      let castingType: 'Action' | 'Bonus' | 'Reaction' | 'Other' = 'Other';
+      const actType = def.activation?.activationType;
+      if (actType === 1) castingType = 'Action';
+      else if (actType === 3) castingType = 'Bonus';
+      else if (actType === 4) castingType = 'Reaction';
+
+      // Human-friendly casting time string
+      const activationTime = def.activation?.activationTime || def.activation?.activationTime === 0 ? def.activation.activationTime : undefined;
+      const activationLabel = castingType === 'Bonus' ? 'Bonus Action' : (castingType === 'Reaction' ? 'Reaction' : (castingType === 'Action' ? 'Action' : 'Other'));
+      const castingTimeStr = activationTime ? `${activationTime} ${activationLabel}` : activationLabel;
+
       // OPTIMIZATION: Parse Summons ONCE here
       const summonData = parseSummonStats(def.description || "");
 
@@ -493,7 +506,8 @@ export function getSpells(character: any): Spell[] {
         name: def.name,
         level: def.level,
         school: def.school || "Magic",
-        castingTime: `${def.activation?.activationTime || 1} ${def.activation?.activationType === 1 ? 'Act' : 'Bns'}`,
+        castingTime: castingTimeStr,
+        castingType: castingType,
         range: range,
         components: def.components?.join(", ") || "",
         description: def.description || "",
