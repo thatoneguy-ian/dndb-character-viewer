@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react';
-import type { DDBCharacter } from './types/dnd-beyond';
 import type { FilterState, QuickFilters, Spell } from './types/character';
 import {
   getActions,
@@ -60,8 +59,9 @@ function App() {
       chrome.storage.local.get(['lastCharId', 'lastView'], (result) => {
         if (result.lastView) setView(result.lastView as 'list' | 'sheet');
         if (result.lastCharId) {
-          setCharId(result.lastCharId);
-          handleFetch(result.lastCharId, false);
+          const id = result.lastCharId as string;
+          setCharId(id);
+          handleFetch(id, false);
         } else {
           setView('list');
         }

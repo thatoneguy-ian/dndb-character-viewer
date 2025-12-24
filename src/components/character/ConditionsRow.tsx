@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import type { DDBCharacter } from '../../types/dnd-beyond';
 import ConditionIcon from '../conditions';
 
