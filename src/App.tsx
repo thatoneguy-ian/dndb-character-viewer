@@ -1,715 +1,320 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect } from 'react';
-import { 
-  getAbilityScore, 
-  getModString, 
-  ABILITY_MAP, 
-  getActions, 
-  getSpells, 
-  getClasses, 
+import { useState, useEffect, useMemo } from 'react';
+import type { FilterState, QuickFilters, Spell } from './types/character';
+import {
+  getActions,
+  getSpells,
   getInventory,
-  calculateHP,
-  calculateAC,
-  getSkills,
-  getSpellSlots, // Ensure this is imported
-  type Skill
+  getSpellSlots,
 } from './dnd-utils';
-import ConditionIcon from './components/conditions';
-import { SCHOOL_ICON_MAP, ActionIcon, BonusActionIcon, ReactionIcon, ConcentrationIcon } from './components/spell-icons';
 
-interface PinnedChar {
-  id: string;
-  name: string;
-  avatar: string;
-  classes: string[];
-}
+import { useCharacter } from './hooks/useCharacter';
+import { usePinnedCharacters } from './hooks/usePinnedCharacters';
 
-// Filter Interface
-interface FilterState {
-  attackOnly: boolean;
-  levels: number[];
-  tags?: string[];
-}
+// Components
+import { CharacterListView } from './components/character/CharacterListView';
+import { CharacterHeader } from './components/character/CharacterHeader';
+import { StatsGrid } from './components/character/StatsGrid';
+import { SkillsPanel } from './components/character/SkillsPanel';
+import { ConditionsRow } from './components/character/ConditionsRow';
+import { SpellSlotBar } from './components/character/SpellSlotBar';
+import { FilterControls } from './components/character/FilterControls';
+import { ActionItem } from './components/character/ActionItem';
+import { SpellItem } from './components/character/SpellItem';
+import { ConsumableItem } from './components/character/ConsumableItem';
+import { IconButton, Badge } from './components/common';
+import {
+  IconHome,
+  IconRefresh,
+  IconBackpack,
+  IconPotion,
+  IconParchment,
+  IconStar
+} from './components/icons';
 
 function App() {
-  const [view, setView] = useState<'list' | 'sheet'>('list'); 
+  const [view, setView] = useState<'list' | 'sheet'>('list');
   const [sheetMode, setSheetMode] = useState<'main' | 'inventory' | 'consumables'>('main');
-
-  const [pinned, setPinned] = useState<PinnedChar[]>([]);
   const [charId, setCharId] = useState('');
-  const [character, setCharacter] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<"Action" | "Bonus" | "Reaction" | "Other" | "Spell">("Action");
-  
-  const [showSkills, setShowSkills] = useState(false);
-  const [skillSort, setSkillSort] = useState<'name'|'bonus'>('name');
-  // const [showSlotDebug, setShowSlotDebug] = useState(false);
-  
-  // Filter State
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
+
+  const { character, loading, error, fetchCharacter } = useCharacter();
+  const { pinned, togglePin, removePin, updatePinnedData } = usePinnedCharacters();
+
   const [filters, setFilters] = useState<FilterState>({
     attackOnly: false,
-    levels: []
-    , tags: []
+    levels: [],
+    tags: []
   });
 
-  // Quick filter state: casting time & concentration
-  const [quickFilters, setQuickFilters] = useState<{ castingTime: Set<string>; concentration: boolean | null }>({ castingTime: new Set(), concentration: null });
+  const [quickFilters, setQuickFilters] = useState<QuickFilters>({
+    castingTime: new Set(),
+    concentration: null
+  });
 
-  const [expandedId, setExpandedId] = useState<string | null>(null); 
-
-  const handleClickCard = (id: string) => {
-    setExpandedId(prev => (prev === id ? null : id));
-  };
-
-  const goHome = () => {
-    setView('list');
-    if(chrome.storage) chrome.storage.local.set({ lastView: 'list' });
-  };
-
-  const updatePinnedData = (charData: any, id: string) => {
-    setPinned(prev => {
-      const exists = prev.find(p => p.id === id);
-      if (!exists) return prev;
-      const newPins = prev.map(p => {
-        if (p.id !== id) return p;
-        return {
-          id: id,
-          name: charData.name,
-          avatar: charData.decorations?.avatarUrl || "https://www.dndbeyond.com/content/skins/waterdeep/images/characters/default-avatar.png",
-          classes: getClasses(charData)
-        };
-      });
-      if(chrome.storage) chrome.storage.local.set({ pinned: newPins });
-      return newPins;
-    });
-  };
-
-  const fetchCharacter = (idToFetch: string, autoSwitch = true) => {
-    if (!idToFetch) return;
-    setLoading(true);
-    setError('');
-    if(chrome.storage) chrome.storage.local.set({ lastCharId: idToFetch });
-
-    chrome.runtime.sendMessage(
-      { action: "FETCH_CHARACTER", characterId: idToFetch },
-      (response: any) => { 
-        setLoading(false);
-        if (response?.success) {
-          const newData = response.data.data;
-          setCharacter(newData);
-          updatePinnedData(newData, idToFetch);
-
-          if (autoSwitch) {
-            setView('sheet');
-            setSheetMode('main');
-            if(chrome.storage) chrome.storage.local.set({ lastView: 'sheet' });
-          }
-        } else {
-          setError(response?.error || "Unknown error");
-        }
-      }
-    );
-  };
-
-  const togglePin = () => {
-    if (!character) return;
-    const newPin: PinnedChar = {
-      id: charId,
-      name: character.name,
-      avatar: character.decorations?.avatarUrl || "https://www.dndbeyond.com/content/skins/waterdeep/images/characters/default-avatar.png",
-      classes: getClasses(character)
-    };
-
-    let newPinnedList = [...pinned];
-    if (newPinnedList.find(p => p.id === newPin.id)) {
-      newPinnedList = newPinnedList.filter(p => p.id !== newPin.id);
-    } else {
-      if (newPinnedList.length >= 7) return alert("Max 7 Pins allowed.");
-      newPinnedList.push(newPin);
-    }
-    setPinned(newPinnedList);
-    if(chrome.storage) chrome.storage.local.set({ pinned: newPinnedList });
-  };
-
-  const removePin = (e: any, idToRemove: string) => {
-    e.stopPropagation();
-    const newList = pinned.filter(p => p.id !== idToRemove);
-    setPinned(newList);
-    if(chrome.storage) chrome.storage.local.set({ pinned: newList });
-  };
-
-  const openDndBeyond = () => {
-    if(character) window.open(character.readonlyUrl || character.viewUrl, '_blank');
-  };
-
-  const handleSync = () => {
-    if (charId) fetchCharacter(charId, false);
-  };
-
-  const toggleLevelFilter = (lvl: number) => {
-    setFilters(prev => ({
-      ...prev,
-      levels: prev.levels.includes(lvl) ? prev.levels.filter(l => l !== lvl) : [...prev.levels, lvl]
-    }));
-  };
-
+  // --- Initial Load ---
   useEffect(() => {
-    if (chrome.storage) {
-      chrome.storage.local.get(['pinned', 'lastCharId', 'lastView'], (result: any) => {
-        const loadedPins = result.pinned && Array.isArray(result.pinned) ? result.pinned.map((p: any) => ({
-            ...p,
-            classes: Array.isArray(p.classes) ? p.classes : ["Lvl " + (p.level || "?")] 
-          })) : [];
-        
-        setPinned(loadedPins);
-
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      chrome.storage.local.get(['lastCharId', 'lastView'], (result) => {
+        if (result.lastView) setView(result.lastView as 'list' | 'sheet');
         if (result.lastCharId) {
-          setCharId(result.lastCharId);
-          fetchCharacter(result.lastCharId, true);
-        } else if (loadedPins.length > 0) {
-          setCharId(loadedPins[0].id);
-          fetchCharacter(loadedPins[0].id, true);
+          const id = result.lastCharId as string;
+          setCharId(id);
+          handleFetch(id, false);
         } else {
           setView('list');
         }
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const IconSearch = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>;
-  const IconRefresh = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>;
-  const IconBackpack = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 10a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><path d="M8 21v-5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v5"/><path d="M8 10h8"/><path d="M9 21v-5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v5"/></svg>;
-  const IconPotion = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 2h2"/><path d="M7 2h10"/><path d="M12 2v6"/><path d="M8.5 10a3 3 0 0 1-.5-1V5h8v4a3 3 0 0 1-.5 1l-2.5 3.5v7h-4v-7Z"/></svg>;
-  const IconParchment = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>;
-  const IconHome = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>;
-  const IconChevronDown = () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg>;
-  const IconChevronUp = () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m18 15-6-6-6 6"/></svg>;
+  const handleFetch = async (id: string, autoSwitch = true) => {
+    const data = await fetchCharacter(id);
+    if (data) {
+      updatePinnedData(data, id);
+      if (autoSwitch) {
+        setView('sheet');
+        setSheetMode('main');
+        if (typeof chrome !== 'undefined' && chrome.storage) chrome.storage.local.set({ lastView: 'sheet' });
+      }
+    } else {
+      setView('list');
+    }
+  };
 
-  // --- RENDER: LIST VIEW (SEARCH) ---
+  const goHome = () => {
+    setView('list');
+    if (typeof chrome !== 'undefined' && chrome.storage) chrome.storage.local.set({ lastView: 'list' });
+  };
+
+  const openDndBeyond = () => {
+    if (character) window.open(character.readonlyUrl || character.viewUrl, '_blank');
+  };
+
+  // --- Filtered Data ---
+  const allSpells = useMemo(() => character ? getSpells(character) : [], [character]);
+  const allActions = useMemo(() => character ? getActions(character) : [], [character]);
+  const allInventory = useMemo(() => character ? getInventory(character) : [], [character]);
+
+  const filteredSpells = useMemo(() => allSpells.filter(spell => {
+    if (filters.attackOnly && !spell.damage && spell.hitOrDc === "") return false;
+    if (filters.levels.length > 0 && !filters.levels.includes(spell.level)) return false;
+    if (filters.tags.length > 0) {
+      if (!spell.tags || !spell.tags.some((t: string) => filters.tags.includes(t))) return false;
+    }
+    if (quickFilters.concentration === true) {
+      if (!spell.components || !spell.components.toLowerCase().includes('concentration')) return false;
+    }
+    if (quickFilters.castingTime.size > 0) {
+      const st = (spell.castingType || 'Other');
+      if (!Array.from(quickFilters.castingTime).some(k => st.toLowerCase() === k.toLowerCase())) return false;
+    }
+    return true;
+  }), [allSpells, filters, quickFilters]);
+
+  const spellsByLevel = useMemo(() => {
+    const map: Record<number, Spell[]> = {};
+    filteredSpells.forEach(s => {
+      if (!map[s.level]) map[s.level] = [];
+      map[s.level].push(s);
+    });
+    return map;
+  }, [filteredSpells]);
+
+  const allTags = useMemo(() =>
+    Array.from(new Set(allSpells.flatMap(s => s.tags || []))).filter((t): t is string => !!t).sort(),
+    [allSpells]);
+
   if (view === 'list') {
     return (
-      <div className="p-3 bg-gray-900 h-full w-full flex flex-col justify-center items-center text-white">
-         <h1 className="text-xl font-bold text-red-500 mb-6">Character Lookup</h1>
-         
-         <div className="w-full max-w-xs space-y-3">
-            <div className="flex gap-2">
-            <input 
-              type="text" 
-              className="flex-1 p-3 rounded bg-gray-800 text-white border border-gray-700 focus:border-red-500 outline-none"
-              placeholder="D&D Beyond ID"
-              value={charId}
-              onChange={(e) => setCharId(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && fetchCharacter(charId)}
-            />
-            <button onClick={() => fetchCharacter(charId)} disabled={loading} className="bg-red-600 hover:bg-red-700 text-white px-5 rounded font-bold disabled:opacity-50">{loading ? '...' : 'Go'}</button>
-            </div>
-            {error && <div className="text-xs text-red-400 text-center">{error}</div>}
-         </div>
-
-         {character && (
-           <button onClick={() => setView('sheet')} className="mt-8 text-gray-500 hover:text-white underline text-sm">
-             Back to {character.name}
-           </button>
-         )}
-
-         {pinned.length > 0 && (
-           <div className="mt-8 w-full max-w-xs">
-             <h2 className="text-xs text-gray-500 mb-2 text-center">Pinned Characters</h2>
-             <div className="grid grid-cols-4 gap-2">
-               {pinned.map(p => (
-                 <div key={p.id} className="relative group cursor-pointer" onClick={() => { setCharId(p.id); fetchCharacter(p.id); }}>
-                    <img src={p.avatar} className="w-12 h-12 rounded-full border-2 border-gray-700 object-cover" />
-                    <button 
-                      onClick={(e) => removePin(e, p.id)}
-                      className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center opacity-90"
-                    >✕</button>
-                 </div>
-               ))}
-             </div>
-           </div>
-         )}
-      </div>
+      <CharacterListView
+        charId={charId}
+        setCharId={setCharId}
+        loading={loading}
+        error={error}
+        pinned={pinned}
+        onFetch={(id) => handleFetch(id)}
+        onRemovePin={removePin}
+      />
     );
   }
 
   const isPinned = pinned.some(p => p.id === charId);
-  const hp = character ? calculateHP(character) : { current: 0, max: 0, temp: 0 };
-  const ac = character ? calculateAC(character) : 10;
-  const skills = character ? getSkills(character).sort((a: Skill, b: Skill) => skillSort === 'name' ? a.name.localeCompare(b.name) : b.bonusValue - a.bonusValue) : [];
-  const spellSlots = character ? getSpellSlots(character) : [];
-
-  // FILTER LOGIC
-  const allSpells = character ? getSpells(character) : [];
-  const filteredSpells = allSpells.filter(spell => {
-    if (filters.attackOnly && !spell.damage && spell.hitOrDc === "") return false;
-    if (filters.levels.length > 0 && !filters.levels.includes(spell.level)) return false;
-    if (filters.tags && filters.tags.length > 0) {
-      if (!spell.tags || !spell.tags.some((t: string) => filters.tags!.includes(t))) return false;
-    }
-    // Quick filter: concentration
-    if (quickFilters.concentration === true) {
-      if (!spell.components || !spell.components.toLowerCase().includes('concentration')) return false;
-    }
-    // Quick filter: casting time (use canonical castingType when available)
-    if (quickFilters.castingTime && quickFilters.castingTime.size > 0) {
-      const st = (spell.castingType || 'Other');
-      const matches = Array.from(quickFilters.castingTime).some(k => st.toLowerCase() === k.toLowerCase());
-      if (!matches) return false;
-    }
-    return true;
-  });
-
-  const spellsByLevel: Record<number, typeof filteredSpells> = {};
-  filteredSpells.forEach(s => {
-    if (!spellsByLevel[s.level]) spellsByLevel[s.level] = [];
-    spellsByLevel[s.level].push(s);
-  });
-
-  // Collect all tags available in the spell list for filter UI
-  const allTags = Array.from(new Set(allSpells.flatMap(s => s.tags || []))).filter(Boolean).sort();
-
-
-  const toggleCastingFilter = (ct: string) => {
-    setQuickFilters(prev => {
-      const next = new Set(prev.castingTime);
-      if (next.has(ct)) next.delete(ct); else next.add(ct);
-      return { ...prev, castingTime: next };
-    });
-  };
-
-  const toggleConcentrationFilter = () => setQuickFilters(prev => ({ ...prev, concentration: prev.concentration === true ? null : true }));
-
-  const toggleTagFilter = (tag: string) => {
-    setFilters(prev => ({ ...prev, tags: prev.tags?.includes(tag) ? prev.tags!.filter(t => t !== tag) : [...(prev.tags || []), tag] }));
-  };
 
   return (
-    <div className="bg-gray-900 h-full w-full text-white relative flex flex-col overflow-hidden">
-      
-      <div className="p-3 bg-gray-900 border-b border-gray-800 shrink-0 z-20">
-        <div className="flex justify-between items-center mb-3">
-          <div className="flex gap-3 items-center">
-             <button onClick={goHome} title="Search" className="text-gray-400 hover:text-white"><IconHome /></button>
-             <button onClick={handleSync} title="Sync Data" className="text-gray-400 hover:text-blue-400"><IconRefresh /></button>
-          </div>
-          <div className="flex gap-3">
-             <button onClick={() => setSheetMode('inventory')} title="Inventory" className={sheetMode === 'inventory' ? 'text-red-500' : 'text-gray-400 hover:text-white'}><IconBackpack /></button>
-             <button onClick={() => setSheetMode('consumables')} title="Consumables" className={sheetMode === 'consumables' ? 'text-red-500' : 'text-gray-400 hover:text-white'}><IconPotion /></button>
-             <div className="w-px h-4 bg-gray-700 mx-1"></div>
-             <button onClick={openDndBeyond} title="Open D&D Beyond" className="text-gray-400 hover:text-blue-400"><IconParchment /></button>
-             <button onClick={togglePin} title="Pin Character" className={isPinned ? 'text-yellow-500' : 'text-gray-600 hover:text-yellow-500'}>★</button>
-          </div>
+    <div className="bg-gray-900 h-full w-full text-white flex flex-col overflow-hidden relative">
+      <div className="px-4 py-3 bg-gray-900/80 backdrop-blur-md border-b border-gray-800 shrink-0 z-30 flex justify-between items-center shadow-lg">
+        <div className="flex gap-2 items-center">
+          <IconButton onClick={goHome} title="Search"><IconHome /></IconButton>
+          <IconButton onClick={() => handleFetch(charId, false)} title="Sync Data" className="hover:text-blue-400"><IconRefresh /></IconButton>
         </div>
-        {character && (
-          <div className="flex items-center gap-3">
-             <img src={character.decorations?.avatarUrl} className="w-12 h-12 rounded-full border border-red-500 bg-gray-800" />
-             <div className="min-w-0">
-               <h2 className="text-lg font-bold leading-none truncate">{character.name}</h2>
-               <div className="flex gap-2 text-xs text-gray-400 mt-1">
-                 <span className="text-green-400 font-bold">{hp.current} / {hp.max} HP {hp.temp > 0 && <span className="text-blue-300">(+{hp.temp})</span>}</span>
-                 <span className="text-gray-500">|</span>
-                 <span className="font-bold text-white">AC {ac}</span>
-               </div>
-             </div>
-          </div>
-        )}
-      </div>
 
-      <div className="flex-1 overflow-y-auto p-3 pt-0">
-        {sheetMode === 'main' && character && (
-          <div key="main" className="animate-in fade-in duration-300">
-            <div className="grid grid-cols-6 gap-1 text-center mb-2 mt-2">
-               {[1, 2, 3, 4, 5, 6].map((id) => (
-                  <div key={id} className="bg-gray-800 p-1 rounded">
-                    <div className="text-[8px] text-gray-500 font-bold">{ABILITY_MAP[id]}</div>
-                    <div className="text-sm font-bold">{getModString(getAbilityScore(character, id))}</div>
-                  </div>
-               ))}
-            </div>
-
-            <div className="mb-1 border border-gray-800 rounded bg-gray-850">
-              <button onClick={() => setShowSkills(!showSkills)} className="w-full flex justify-between items-center p-2 text-xs font-bold text-gray-400">
-                <span>SKILLS</span>{showSkills ? <IconChevronUp /> : <IconChevronDown />}
-              </button>
-              <div className={`transition-all duration-300 ease-in-out overflow-hidden ${showSkills ? 'max-h-96' : 'max-h-0'}`}>
-                <div className="p-2 border-t border-gray-800 bg-gray-900">
-                  <div className="flex justify-end mb-2">
-                    <button onClick={() => setSkillSort(skillSort === 'name' ? 'bonus' : 'name')} className="text-[9px] text-blue-400 uppercase font-bold">Sort by: {skillSort}</button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                    {skills.map((skill: Skill) => (
-                      <div key={skill.name} className="flex justify-between text-xs">
-                        <span className="text-gray-400 truncate pr-2">{skill.name}</span>
-                        <span className={`font-mono ${skill.bonusValue > 0 ? 'text-white' : 'text-gray-600'}`}>{skill.bonus}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-            {/* CONDITIONS: icons-only row under Skills */}
-            <div className="flex mb-0 sticky top-0 bg-gray-900 z-10 pt-0 pb-0">
-              <ConditionsRow character={character} />
-            </div>
-            <div className="flex border-b border-gray-700 mb-3 sticky top-0 bg-gray-900 z-10 pt-2">
-              {(["Action", "Bonus", "Reaction", "Other", "Spell"] as const).map((tab) => (
-                <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-wider transition-colors ${activeTab === tab ? "text-red-500 border-b-2 border-red-500" : "text-gray-500"}`}>{tab}</button>
-              ))}
-            </div>
-            {/* NEW: Spell Slot Bar */}
-            {activeTab === 'Spell' && (
-              <div className="mb-3 px-2 py-1 text-xs bg-gray-800 border border-gray-700 rounded-md flex items-center gap-3 flex-wrap">
-                {(() => {
-                  const visible = spellSlots.filter(s => !(s.max === 0 && (s.used ?? 0) === 0));
-                  if (visible.length === 0) return (<div className="text-xs text-gray-400">No spell slots found for this character.</div>);
-
-                  const getOrdinal = (n: number) => {
-                    if (n > 3 && n < 21) return `${n}th`;
-                    switch (n % 10) {
-                      case 1:  return `${n}st`;
-                      case 2:  return `${n}nd`;
-                      case 3:  return `${n}rd`;
-                      default: return `${n}th`;
-                    }
-                  };
-
-                  return visible.map((slot, idx) => {
-                    const remaining = (slot.available ?? ((slot.max ?? 0) - (slot.used ?? 0)));
-                    return (
-                      <div key={idx} className="flex items-center gap-2 min-w-0">
-                        <span className="font-bold text-blue-300 text-[11px] truncate">{slot.name || getOrdinal(slot.level)}:</span>
-                        <span className="text-white font-mono text-[11px]">{remaining}/{slot.max ?? 0}</span>
-                        {idx < visible.length - 1 && <span className="hidden sm:inline text-gray-600">|</span>}
-                      </div>
-                    );
-                  });
-                })()}
-              </div>
-            )}
-            
-
-            {/* SPELL SLOTS & FILTERS (Only on Spell Tab) */}
-            {activeTab === "Spell" && (
-              <div className="mb-4">
-                 <div className="flex justify-between items-center mb-2">
-                    <button onClick={() => setFilters(f => ({ ...f, attackOnly: !f.attackOnly }))} className={`text-[10px] px-2 py-1 rounded border ${filters.attackOnly ? 'bg-red-900/50 border-red-500 text-red-200' : 'border-gray-600 text-gray-400 hover:text-white'}`}>⚔️ Attacks Only</button>
-                    <div className="flex items-center gap-2">
-                      <div className="flex gap-1 items-center" aria-hidden>
-                        <button onClick={() => toggleCastingFilter('Action')} title="Action spells only" className="w-8 h-8 rounded flex items-center justify-center bg-gray-800 border border-gray-700 text-white hover:bg-gray-700"><ActionIcon title="Action" className="w-5 h-5" /></button>
-                        <button onClick={() => toggleCastingFilter('Bonus')} title="Bonus Action spells only" className="w-8 h-8 rounded flex items-center justify-center bg-gray-800 border border-gray-700 text-white hover:bg-gray-700"><BonusActionIcon title="Bonus" className="w-5 h-5" /></button>
-                        <button onClick={() => toggleCastingFilter('Reaction')} title="Reaction spells only" className="w-8 h-8 rounded flex items-center justify-center bg-gray-800 border border-gray-700 text-white hover:bg-gray-700"><ReactionIcon title="Reaction" className="w-5 h-5" /></button>
-                        <button onClick={() => setFilters(f => ({ ...f, levels: [] }))} title="Clear levels" className="w-8 h-8 rounded flex items-center justify-center bg-gray-800 border border-gray-700 text-gray-400 hover:bg-gray-700">✕</button>
-                      </div>
-                      <button onClick={() => setShowAdvanced(!showAdvanced)} className={`text-[10px] px-2 py-1 rounded border ${showAdvanced ? 'bg-gray-700 border-gray-500 text-white' : 'border-gray-600 text-gray-400 hover:text-white'}`}>Filters {showAdvanced ? '▲' : '▼'}</button>
-                    </div>
-                 </div>
-
-                 <div className={`transition-all duration-500 ease-in-out overflow-hidden ${showAdvanced ? 'max-h-[600px]' : 'max-h-0'}`}>
-                   <div className="bg-gray-800 p-2 rounded mb-3 border border-gray-700">
-                     <div className="text-[9px] font-bold text-gray-500 uppercase mb-1">Spell Levels</div>
-                     <div className="flex flex-wrap gap-1">
-                       {[0,1,2,3,4,5,6,7,8,9].map(lvl => (
-                         <button key={lvl} onClick={() => toggleLevelFilter(lvl)} className={`w-6 h-6 text-[10px] rounded border flex items-center justify-center ${filters.levels.includes(lvl) ? 'bg-blue-600 border-blue-400 text-white' : 'border-gray-600 text-gray-400 hover:bg-gray-700'}`}>{lvl}</button>
-                       ))}
-                     </div>
-                   </div>
-                     <div className="bg-gray-800 p-2 rounded mb-3 border border-gray-700">
-                       <div className="text-[9px] font-bold text-gray-500 uppercase mb-1">Tags</div>
-                       <div className="flex flex-wrap gap-1">
-                         {allTags.length === 0 && <div className="text-[11px] text-gray-400">No tags</div>}
-                         {allTags.map(tag => (
-                           <button key={tag} onClick={() => toggleTagFilter(tag)} className={`text-[10px] px-2 py-1 rounded border ${filters.tags?.includes(tag) ? 'bg-green-600 border-green-400 text-white' : 'border-gray-600 text-gray-400 hover:bg-gray-700'}`}>{tag}</button>
-                         ))}
-                       </div>
-                     </div>
-                    <div className="bg-gray-800 p-2 rounded mb-3 border border-gray-700">
-                      <div className="text-[9px] font-bold text-gray-500 uppercase mb-1">Quick Filters</div>
-                      <div className="flex items-center gap-2">
-                        <button onClick={() => toggleConcentrationFilter()} title="Concentration only" className={`w-8 h-8 rounded flex items-center justify-center ${quickFilters.concentration ? 'bg-blue-600 border-blue-400 text-white' : 'bg-gray-800 border-gray-700 text-gray-300'}`}><ConcentrationIcon title="Concentration" className="w-5 h-5" /></button>
-                        <div className="text-xs text-gray-400">Casting Time Filters are at the top</div>
-                      </div>
-                    </div>
-                 </div>
-              </div>
-            )}
-
-            <div key={`tab-${activeTab}-${filters.attackOnly}-${filters.levels.join(',')}`} className="space-y-2 pb-4 animate-in fade-in duration-300">
-               {activeTab === "Spell" ? (
-                 Object.keys(spellsByLevel).sort((a,b) => Number(a)-Number(b)).map(levelKey => {
-                   const lvl = Number(levelKey);
-                   return (
-                     <div key={lvl}>
-                       <div className="text-[10px] font-bold text-gray-500 uppercase border-b border-gray-800 mb-2 mt-4 pb-1">
-                         {lvl === 0 ? "Cantrips" : `Level ${lvl}`}
-                       </div>
-                       <div className="space-y-2">
-                         {spellsByLevel[lvl].map((spell: any, sidx: number) => {
-                           const uniqueId = `spell-${lvl}-${sidx}`;
-                           const isOpen = expandedId === uniqueId;
-                           const hasTags = Array.isArray(spell.tags) && spell.tags.length > 0;
-                           const summonStats = spell.summonStats;
-
-                           return (
-                             <div
-                               key={uniqueId}
-                               role="button"
-                               tabIndex={0}
-                               aria-expanded={isOpen}
-                               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClickCard(uniqueId); } }}
-                               className={`relative bg-gray-800 p-2 rounded border transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 ${isOpen ? 'border-blue-500 bg-gray-900' : 'border-gray-700'}`}
-                               onClick={() => handleClickCard(uniqueId)}
-                             >
-                               <div className="flex justify-between items-center mb-1">
-                                              <div className="flex items-center gap-2 min-w-0">
-                                                {(() => {
-                                                  const IconComp = SCHOOL_ICON_MAP[spell.school] as any;
-                                                  return IconComp ? <IconComp title={spell.school} className="w-4 h-4 text-blue-300 flex-shrink-0" /> : null;
-                                                })()}
-                                                <h3 className="font-bold text-sm text-blue-300 truncate">{spell.name}</h3>
-                                              </div>
-                                              <div className="text-[10px] text-gray-400 whitespace-nowrap">{spell.castingTime}</div>
-                               </div>
-                               <div className="flex justify-between text-xs text-gray-400">
-                                  <span>{spell.range}</span>
-                                  {spell.damage && <span className="text-gray-300">{spell.damage}</span>}
-                               </div>
-                               {/* Tags (bottom-right) */}
-                               {spell.tags && spell.tags.length > 0 && (
-                                 <div className="absolute bottom-2 right-2 flex gap-1 items-end">
-                                   {spell.tags.slice(0,3).map((t: string, i: number) => (
-                                     <span key={i} className="text-[10px] px-2 py-0.5 rounded bg-gray-700 text-gray-200 whitespace-nowrap">{t}</span>
-                                   ))}
-                                   {spell.tags.length > 3 && (
-                                     <span title={spell.tags.join(', ')} className="text-[10px] px-2 py-0.5 rounded bg-gray-700 text-gray-200 cursor-help">...</span>
-                                   )}
-                                 </div>
-                               )}
-                               {isOpen && (
-                                 <div className={`mt-2 pt-2 border-t border-gray-700 text-xs text-gray-300 animate-in fade-in slide-in-from-top-1 duration-300 cursor-auto ${hasTags ? 'pb-8' : ''}`}>
-                                   {summonStats ? (
-                                     <div className="bg-gray-850 p-2 rounded border border-gray-600">
-                                       <div className="font-bold text-white mb-2 uppercase">{summonStats.name}</div>
-                                       <div className="flex justify-between mb-2 text-[10px] text-gray-300">
-                                         <span>AC {summonStats.ac}</span><span>HP {summonStats.hp}</span><span>Spd {summonStats.speed}</span>
-                                       </div>
-                                       <div className="grid grid-cols-6 gap-1 text-center text-[9px] text-gray-400 mb-2">
-                                         <div>STR<br/><span className="text-white">{summonStats.str}</span></div>
-                                         <div>DEX<br/><span className="text-white">{summonStats.dex}</span></div>
-                                         <div>CON<br/><span className="text-white">{summonStats.con}</span></div>
-                                         <div>INT<br/><span className="text-white">{summonStats.int}</span></div>
-                                         <div>WIS<br/><span className="text-white">{summonStats.wis}</span></div>
-                                         <div>CHA<br/><span className="text-white">{summonStats.cha}</span></div>
-                                       </div>
-                                       <div className="mt-2 pt-2 border-t border-gray-700" dangerouslySetInnerHTML={{ __html: spell.description }} />
-                                     </div>
-                                   ) : (<div dangerouslySetInnerHTML={{ __html: spell.description }} />)}
-                                 </div>
-                               )}
-                             </div>
-                           );
-                         })}
-                       </div>
-                     </div>
-                   );
-                 })
-               ) : (
-                 getActions(character).filter(act => act.type === activeTab).map((action, idx) => {
-                   const uniqueId = `action-${idx}`;
-                   const isOpen = expandedId === uniqueId;
-                   return (
-                     <div
-                       key={uniqueId}
-                       role="button"
-                       tabIndex={0}
-                       aria-expanded={isOpen}
-                       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClickCard(uniqueId); } }}
-                       className={`bg-gray-800 p-2 rounded border transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500 ${isOpen ? 'border-red-500 bg-gray-900' : 'border-gray-700'}`}
-                       onClick={() => handleClickCard(uniqueId)}
-                     >
-                       <div className="flex justify-between items-start">
-                          <div className="font-bold text-sm text-white truncate pr-2">{action.name}</div>
-                          {action.hitOrDc && <div className="text-xs text-red-300 font-mono whitespace-nowrap">{action.hitOrDc}</div>}
-                       </div>
-                       <div className="flex justify-between items-center mt-1">
-                          <div className="text-xs text-gray-500 truncate w-2/3 italic">{action.attackType || action.source}</div>
-                          {action.damage && <div className="text-xs text-gray-300">{action.damage}</div>}
-                       </div>
-                       {isOpen && (
-                         <div className="mt-2 pt-2 border-t border-gray-700 text-xs text-gray-300 animate-in fade-in slide-in-from-top-1 duration-300 cursor-auto">
-                            <div className="font-bold mb-1">{action.name}</div>
-                            <div dangerouslySetInnerHTML={{ __html: action.description }} />
-                         </div>
-                       )}
-                     </div>
-                   );
-                 })
-               )}
-               {(activeTab === "Spell" 
-                  ? filteredSpells.length === 0 
-                  : getActions(character).filter(act => act.type === activeTab).length === 0
-               ) && <div className="text-center text-gray-500 py-6 text-xs italic">No {activeTab}s found.</div>}
-            </div>
-          </div>
-        )}
-        {sheetMode === 'inventory' && character && (
-          <div key="inventory" className="space-y-2 mt-2 animate-in fade-in duration-300">
-            <h3 className="text-xs font-bold text-gray-500 uppercase">Equipment</h3>
-            {getInventory(character).filter(i => i.type === 'Gear').map((item, idx) => (
-              <div key={idx} className="bg-gray-800 p-2 rounded border border-gray-700 flex justify-between">
-                <span className="text-sm font-bold">{item.name}</span>
-                <span className="text-xs text-gray-400">x{item.quantity}</span>
-              </div>
-            ))}
-          </div>
-        )}
-        {sheetMode === 'consumables' && character && (
-          <div key="consumables" className="space-y-2 mt-2 animate-in fade-in duration-300">
-            <h3 className="text-xs font-bold text-gray-500 uppercase">Potions & Scrolls</h3>
-            {getInventory(character).filter(i => i.type === 'Consumable').map((item, idx) => {
-               const uniqueId = `item-${idx}`;
-               const isOpen = expandedId === uniqueId;
-               return (
-                <div
-                  key={uniqueId}
-                  role="button"
-                  tabIndex={0}
-                  aria-expanded={isOpen}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClickCard(uniqueId); } }}
-                  className="bg-gray-800 p-2 rounded border border-gray-700 relative cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500"
-                  onClick={() => handleClickCard(uniqueId)}
-                >
-                   <div className="flex justify-between">
-                      <span className="text-sm font-bold text-green-300">{item.name}</span>
-                      <span className="text-xs text-white bg-gray-700 px-1.5 rounded">x{item.quantity}</span>
-                   </div>
-                   {isOpen && (
-                     <div className="mt-2 pt-2 border-t border-gray-700 text-xs text-gray-300 animate-in fade-in slide-in-from-top-1 duration-300 cursor-auto"><div dangerouslySetInnerHTML={{ __html: item.description }} /></div>
-                   )}
-                </div>
-               );
-            })}
-             {getInventory(character).filter(i => i.type === 'Consumable').length === 0 && <div className="text-center text-gray-500 text-xs italic py-4">No consumables found.</div>}
-          </div>
-        )}
-      </div>
-      <div className="bg-gray-900 border-t border-gray-800 p-2 shrink-0 z-30">
-         <div className="flex gap-3 items-center overflow-x-auto px-1">
-           <div onClick={() => setView('list')} className="cursor-pointer flex flex-col items-center min-w-10">
-             <div className="w-10 h-10 rounded-full border-2 border-gray-600 border-dashed flex items-center justify-center text-gray-400 transition-all"><IconSearch /></div>
-           </div>
-           {pinned.map((p) => (
-             <div key={p.id} onClick={() => { setCharId(p.id); fetchCharacter(p.id); }} className="cursor-pointer relative flex flex-col items-center min-w-10">
-               <img src={p.avatar} className={`w-10 h-10 rounded-full border-2 object-cover transition-all ${p.id === charId ? 'border-red-500 scale-110' : 'border-gray-600 opacity-90'}`} title={p.name} />
-               {p.id === charId && <div className="w-1 h-1 bg-red-500 rounded-full mt-1"></div>}
-             </div>
-           ))}
-         </div>
-      </div>
-    </div>
-  );
-}
-
-export default App;
-
-// -------------------- Conditions UI Component --------------------
-interface ConditionDef { key: string; emoji: string; label: string; description: string }
-
-const CONDITIONS: ConditionDef[] = [
-  { key: 'Blinded', emoji: '👁️', label: 'Blinded', description: `Blinded: While you have the Blinded condition, you experience the following effects.\n* Can't See. You can't see and automatically fail any ability check that requires sight.\n* Attacks Affected. Attack rolls against you have Advantage, and your attack rolls have Disadvantage.` },
-  { key: 'Charmed', emoji: '💘', label: 'Charmed', description: 'Charmed: You can\'t attack the charmer and the charmer has advantage on social checks.' },
-  { key: 'Deafened', emoji: '🦻', label: 'Deafened', description: 'Deafened: You can\'t hear and automatically fail any ability check that requires hearing.' },
-  { key: 'Frightened', emoji: '😱', label: 'Frightened', description: 'Frightened: You have disadvantage on ability checks and attack rolls while the source of your fear is within line of sight.' },
-  { key: 'Grappled', emoji: '🤼', label: 'Grappled', description: 'Grappled: Your speed is 0 and you can\'t benefit from any bonus to your speed.' },
-  { key: 'Incapacitated', emoji: '🚫', label: 'Incapacitated', description: 'Incapacitated: You can\'t take actions or reactions.' },
-  { key: 'Invisible', emoji: '🫥', label: 'Invisible', description: 'Invisible: You are unseen. Attack rolls against you have disadvantage; your attack rolls have advantage when you attack from invisibility.' },
-  { key: 'Paralyzed', emoji: '🧍‍♂️', label: 'Paralyzed', description: 'Paralyzed: You are incapacitated and can\'t move or speak. Attack rolls against you have advantage and any hit that deals bludgeoning damage is a critical hit.' },
-  { key: 'Petrified', emoji: '🪨', label: 'Petrified', description: 'Petrified: You are transformed into a solid inanimate substance and are incapacitated.' },
-  { key: 'Poisoned', emoji: '☠️', label: 'Poisoned', description: 'Poisoned: You have disadvantage on attack rolls and ability checks.' },
-  { key: 'Prone', emoji: '🧎', label: 'Prone', description: 'Prone: You are on the ground. You have disadvantage on attack rolls, and attackers within 5 ft have advantage.' },
-  { key: 'Restrained', emoji: '🔗', label: 'Restrained', description: 'Restrained: Your speed is 0 and you have disadvantage on Dexterity saving throws.' },
-  { key: 'Stunned', emoji: '💫', label: 'Stunned', description: 'Stunned: You are incapacitated, can\'t move, and can\'t speak.' },
-  { key: 'Unconscious', emoji: '🛌', label: 'Unconscious', description: 'Unconscious: You are incapacitated, can\'t move or speak, and are unaware of your surroundings.' }
-];
-
-function ConditionsRow({ character }: { character: any }) {
-  const [open, setOpen] = useState<ConditionDef | null>(null);
-
-  // Determine active conditions from a few possible payload locations.
-  // Map numeric IDs (from payload) to canonical condition names
-  const CONDITION_ID_MAP: Record<number, string> = {
-    1: 'Blinded', 2: 'Charmed', 3: 'Deafened', 5: 'Frightened', 6: 'Grappled',
-    7: 'Incapacitated', 8: 'Invisible', 9: 'Paralyzed', 10: 'Petrified', 11: 'Poisoned',
-    12: 'Prone', 13: 'Restrained', 14: 'Stunned', 15: 'Unconscious'
-  };
-
-  const getActiveConditions = () => {
-    if (!character) return [] as string[];
-    const candidates: string[] = [];
-
-    const pushFromEntry = (c: any) => {
-      if (!c && c !== 0) return;
-      if (typeof c === 'string') { candidates.push(c); return; }
-      if (typeof c === 'number') { const mapped = CONDITION_ID_MAP[c]; if (mapped) candidates.push(mapped); return; }
-      if (c?.name) { candidates.push(c.name); return; }
-      if (c?.id != null) {
-        const idNum = Number(c.id);
-        if (!Number.isNaN(idNum) && CONDITION_ID_MAP[idNum]) candidates.push(CONDITION_ID_MAP[idNum]);
-      }
-    };
-
-    if (Array.isArray(character.conditions)) character.conditions.forEach(pushFromEntry);
-    if (Array.isArray(character.appliedConditions)) character.appliedConditions.forEach(pushFromEntry);
-    if (Array.isArray(character.statusEffects)) character.statusEffects.forEach(pushFromEntry);
-
-    return Array.from(new Set(candidates.map(s => String(s).trim()).filter(Boolean)));
-  };
-
-  const active = getActiveConditions();
-  const activeDefs = CONDITIONS.filter(cd => active.some(a => a.toLowerCase() === cd.key.toLowerCase()));
-
-  // If none found, return nothing.
-  if (!activeDefs || activeDefs.length === 0) return null;
-
-  return (
-    <div className="mt-2">
-      <div className="flex items-center gap-2 mb-1">
-        <div className="text-[9px] font-bold text-gray-500 uppercase">Conditions</div>
-        <span className="ml-1 inline-flex items-center justify-center bg-red-600 text-[10px] font-bold text-white px-2 py-0.5 rounded-full" aria-label={`${activeDefs.length} active conditions`}>{activeDefs.length}</span>
-      </div>
-      <div className="flex gap-2 items-center" aria-hidden={false}>
-        {activeDefs.map((c) => (
-          <button
-            key={c.key}
-            onClick={(e) => { e.stopPropagation(); setOpen(c); }}
-            title={c.label}
-            aria-label={c.label}
-            className="w-7 h-7 rounded flex items-center justify-center bg-gray-800 border border-gray-700 text-xl hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        <div className="flex gap-2 items-center bg-gray-800/50 p-1 rounded-xl border border-gray-700/30">
+          <IconButton
+            onClick={() => setSheetMode('main')}
+            title="Main Sheet"
+            className={sheetMode === 'main' ? 'text-red-500 bg-red-900/20' : ''}
           >
-            <ConditionIcon name={c.key} title={c.label} className="w-5 h-5 text-white" />
-          </button>
-        ))}
+            <IconParchment />
+          </IconButton>
+          <IconButton
+            onClick={() => setSheetMode('inventory')}
+            title="Inventory"
+            className={sheetMode === 'inventory' ? 'text-red-500 bg-red-900/20' : ''}
+          >
+            <IconBackpack />
+          </IconButton>
+          <IconButton
+            onClick={() => setSheetMode('consumables')}
+            title="Consumables"
+            className={sheetMode === 'consumables' ? 'text-red-500 bg-red-900/20' : ''}
+          >
+            <IconPotion />
+          </IconButton>
+        </div>
+
+        <div className="flex gap-2 items-center">
+          <IconButton onClick={openDndBeyond} title="Open D&D Beyond" className="hover:text-blue-400"><IconParchment /></IconButton>
+          <IconButton onClick={() => togglePin(character, charId)} title="Pin Character">
+            <IconStar filled={isPinned} />
+          </IconButton>
+        </div>
       </div>
 
-      {open && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center" role="dialog" aria-modal="true">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setOpen(null)} />
-          <div className="relative bg-gray-900 border border-gray-700 rounded p-4 w-11/12 max-w-lg text-sm text-gray-200 z-50">
-            <div className="flex justify-between items-start">
-              <div>
-                <div className="font-bold text-white text-lg">{open.label}</div>
-                <div className="text-xs text-gray-400 mt-1">Condition Details</div>
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-4 focus:outline-none">
+        {character && (
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+            {sheetMode === 'main' ? (
+              <>
+                <CharacterHeader character={character} />
+                <StatsGrid character={character} />
+                <SkillsPanel character={character} />
+                <ConditionsRow character={character} />
+
+                <div className="flex bg-gray-800/30 p-1 rounded-xl border border-gray-800/50 mb-4 sticky top-0 z-20 backdrop-blur-sm">
+                  {(["Action", "Bonus", "Reaction", "Other", "Spell"] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => { setActiveTab(tab); setExpandedId(null); }}
+                      className={`flex-1 py-2 text-[10px] font-black uppercase tracking-wider transition-all rounded-lg ${activeTab === tab ? "text-white bg-red-600 shadow-lg shadow-red-900/20" : "text-gray-500 hover:text-gray-300"}`}
+                    >
+                      {tab}
+                    </button>
+                  ))}
+                </div>
+
+                {activeTab === 'Spell' && (
+                  <>
+                    <SpellSlotBar spellSlots={getSpellSlots(character)} />
+                    <FilterControls
+                      filters={filters}
+                      setFilters={setFilters}
+                      quickFilters={quickFilters}
+                      setQuickFilters={setQuickFilters}
+                      allTags={allTags}
+                      showAdvanced={showAdvanced}
+                      setShowAdvanced={setShowAdvanced}
+                    />
+                  </>
+                )}
+
+                <div className="pb-20 space-y-2 animate-in fade-in duration-300">
+                  {activeTab === 'Spell' ? (
+                    Object.keys(spellsByLevel).sort((a, b) => Number(a) - Number(b)).map(levelKey => {
+                      const lvl = Number(levelKey);
+                      return (
+                        <div key={lvl}>
+                          <div className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] border-b border-gray-800/50 mb-3 mt-4 pb-1 flex items-center gap-2">
+                            <span>{lvl === 0 ? "Cantrips" : `Level ${lvl} Spells`}</span>
+                            <div className="h-px flex-1 bg-gray-800/30"></div>
+                          </div>
+                          {spellsByLevel[lvl].map((spell, idx) => (
+                            <SpellItem
+                              key={`${lvl}-${idx}`}
+                              spell={spell}
+                              isOpen={expandedId === `spell-${lvl}-${idx}`}
+                              onClick={() => setExpandedId(expandedId === `spell-${lvl}-${idx}` ? null : `spell-${lvl}-${idx}`)}
+                            />
+                          ))}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    allActions.filter(act => act.type === activeTab).map((action, idx) => (
+                      <ActionItem
+                        key={idx}
+                        action={action}
+                        isOpen={expandedId === `action-${idx}`}
+                        onClick={() => setExpandedId(expandedId === `action-${idx}` ? null : `action-${idx}`)}
+                      />
+                    ))
+                  )}
+
+                  {((activeTab === "Spell" ? filteredSpells.length : allActions.filter(act => act.type === activeTab).length) === 0) && (
+                    <div className="text-center text-gray-600 py-12 flex flex-col items-center gap-3">
+                      <div className="text-4xl">🌑</div>
+                      <div className="text-xs font-bold uppercase tracking-widest italic">No {activeTab}s found.</div>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : sheetMode === 'inventory' ? (
+              <div className="space-y-4 pb-20">
+                <div className="flex items-center gap-3 mb-2">
+                  <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Equipment</h3>
+                  <div className="h-px flex-1 bg-gray-800"></div>
+                </div>
+                {allInventory.filter(i => i.type === 'Gear').map((item, idx) => (
+                  <div key={idx} className="bg-gray-800/40 p-3 rounded-lg border border-gray-700/30 flex justify-between items-center">
+                    <span className="text-sm font-bold text-gray-200">{item.name}</span>
+                    <Badge>x{item.quantity}</Badge>
+                  </div>
+                ))}
               </div>
-              <button onClick={() => setOpen(null)} className="text-gray-400 hover:text-white">✕</button>
-            </div>
-            <div className="mt-3 whitespace-pre-line text-xs text-gray-300">{open.description}</div>
-            <div className="mt-3 text-[11px] text-gray-500 italic">Legacy Definition</div>
-            <div className="mt-1 text-xs text-gray-400">* {open.label} effects mirror classic rules; see rules text for full details.</div>
+            ) : (
+              <div className="space-y-2 pb-20">
+                <div className="flex items-center gap-3 mb-4">
+                  <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Potions & Consumables</h3>
+                  <div className="h-px flex-1 bg-gray-800"></div>
+                </div>
+                {allInventory.filter(i => i.type === 'Consumable').map((item, idx) => (
+                  <ConsumableItem
+                    key={idx}
+                    item={item}
+                    isOpen={expandedId === `consumable-${idx}`}
+                    onClick={() => setExpandedId(expandedId === `consumable-${idx}` ? null : `consumable-${idx}`)}
+                  />
+                ))}
+                {allInventory.filter(i => i.type === 'Consumable').length === 0 && (
+                  <div className="text-center text-gray-600 py-12">
+                    <div className="text-xs font-bold uppercase tracking-widest italic">Inventory Empty</div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {view === 'sheet' && pinned.length > 0 && (
+        <div className="bg-gray-900/90 backdrop-blur-md border-t border-gray-800 p-2 shrink-0 z-30 shadow-2xl">
+          <div className="flex gap-4 items-center overflow-x-auto px-2 no-scrollbar">
+            {pinned.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => { setCharId(p.id); handleFetch(p.id); }}
+                className={`relative flex flex-col items-center shrink-0 transition-all duration-300 ${p.id === charId ? 'scale-110' : 'opacity-40 hover:opacity-100'}`}
+              >
+                <img src={p.avatar} className={`w-10 h-10 rounded-full border-2 object-cover ${p.id === charId ? 'border-red-500 shadow-lg shadow-red-900/40' : 'border-gray-700'}`} alt={p.name} title={p.name} />
+                {p.id === charId && <div className="absolute -bottom-1 w-1.5 h-1.5 bg-red-500 rounded-full shadow-lg shadow-red-500/50"></div>}
+              </button>
+            ))}
           </div>
         </div>
       )}
     </div>
   );
 }
+
+export default App;
