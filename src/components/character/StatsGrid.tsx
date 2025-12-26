@@ -12,12 +12,12 @@ export const StatsGrid: React.FC<StatsGridProps> = ({ character }) => {
             {[1, 2, 3, 4, 5, 6].map((id) => (
                 <div
                     key={id}
-                    className="bg-gray-800/80 backdrop-blur-sm border border-gray-700/50 p-1.5 rounded-lg shadow-inner"
+                    className="bg-[var(--bg-input)] backdrop-blur-sm border border-[var(--border-color)] p-1.5 rounded-lg shadow-sm transition-all duration-300"
                 >
-                    <div className="text-[9px] text-gray-500 font-bold uppercase tracking-tighter">
+                    <div className="text-[9px] text-[var(--text-secondary)] font-bold uppercase tracking-tighter">
                         {ABILITY_MAP[id]}
                     </div>
-                    <div className="text-sm font-black text-white">
+                    <div className="text-sm font-black text-[var(--text-primary)]">
                         {getModString(getAbilityScore(character, id))}
                     </div>
                 </div>

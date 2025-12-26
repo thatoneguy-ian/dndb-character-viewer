@@ -86,3 +86,20 @@ export interface CharacterHP {
     max: number;
     temp: number;
 }
+
+export type DiceType = 2 | 4 | 6 | 8 | 10 | 12 | 20 | 100;
+
+export interface DiceRoll {
+    sides: DiceType;
+    value: number;
+}
+
+export interface RollResult {
+    id: string;
+    notation: string;
+    label?: string;
+    rolls: DiceRoll[];
+    modifier: number;
+    total: number;
+    timestamp: number;
+}

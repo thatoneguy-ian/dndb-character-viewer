@@ -13,7 +13,9 @@ export const CharacterHeader: React.FC<CharacterHeaderProps> = ({ character }) =
     const avatarUrl = character.decorations?.avatarUrl || "https://www.dndbeyond.com/content/skins/waterdeep/images/characters/default-avatar.png";
 
     return (
-        <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 rounded-xl mb-4 border border-gray-700/30 shadow-xl">
+        <div className="flex items-center gap-4 p-4 rounded-xl mb-4 border transition-all duration-300 shadow-xl
+            bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 
+            border-gray-700/30">
             <div className="relative">
                 <img
                     src={avatarUrl}

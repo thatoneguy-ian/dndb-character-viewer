@@ -9,8 +9,11 @@ import {
 
 import { useCharacter } from './hooks/useCharacter';
 import { usePinnedCharacters } from './hooks/usePinnedCharacters';
+import { useDice } from './hooks/useDice';
 
 // Components
+import { DiceLog } from './components/character/DiceLog';
+import { DiceQuickBar } from './components/character/DiceQuickBar';
 import { CharacterListView } from './components/character/CharacterListView';
 import { CharacterHeader } from './components/character/CharacterHeader';
 import { StatsGrid } from './components/character/StatsGrid';
@@ -37,10 +40,12 @@ function App() {
   const [charId, setCharId] = useState('');
   const [activeTab, setActiveTab] = useState<"Action" | "Bonus" | "Reaction" | "Other" | "Spell">("Action");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const { character, loading, error, fetchCharacter } = useCharacter();
   const { pinned, togglePin, removePin, updatePinnedData } = usePinnedCharacters();
+  const { history, rollDice, clearHistory } = useDice();
 
   const [filters, setFilters] = useState<FilterState>({
     attackOnly: false,
@@ -143,32 +148,39 @@ function App() {
   const isPinned = pinned.some(p => p.id === charId);
 
   return (
-    <div className="bg-gray-900 h-full w-full text-white flex flex-col overflow-hidden relative">
-      <div className="px-4 py-3 bg-gray-900/80 backdrop-blur-md border-b border-gray-800 shrink-0 z-30 flex justify-between items-center shadow-lg">
+    <div className={`h-full w-full flex flex-col overflow-hidden relative transition-colors duration-300 ${theme === 'dark' ? 'bg-[var(--bg-app)] text-white dark' : 'bg-[var(--bg-app)] text-[var(--text-primary)] light-theme'}`}>
+      <div className={`px-4 py-3 backdrop-blur-md border-b shrink-0 z-30 flex justify-between items-center shadow-lg transition-colors duration-300 ${theme === 'dark' ? 'bg-[var(--bg-app)]/80 border-gray-800 text-white' : 'bg-[var(--bg-card)]/80 border-[var(--border-color)] text-[var(--text-primary)]'}`}>
         <div className="flex gap-2 items-center">
           <IconButton onClick={goHome} title="Search"><IconHome /></IconButton>
           <IconButton onClick={() => handleFetch(charId, false)} title="Sync Data" className="hover:text-blue-400"><IconRefresh /></IconButton>
+          <button
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className={`p-1.5 rounded-lg transition-all duration-300 flex items-center justify-center ${theme === 'dark' ? 'bg-gray-800 text-yellow-400 hover:bg-gray-700' : 'bg-gray-100 text-blue-600 hover:bg-gray-200'}`}
+            title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+          >
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
         </div>
 
-        <div className="flex gap-2 items-center bg-gray-800/50 p-1 rounded-xl border border-gray-700/30">
+        <div className="flex gap-2 items-center bg-[var(--bg-input)]/50 dark:bg-gray-800/50 p-1 rounded-xl border border-[var(--border-color)] dark:border-gray-700/30 transition-colors duration-300">
           <IconButton
             onClick={() => setSheetMode('main')}
             title="Main Sheet"
-            className={sheetMode === 'main' ? 'text-red-500 bg-red-900/20' : ''}
+            className={sheetMode === 'main' ? 'text-[#D32F2F] bg-red-500/10 dark:bg-red-900/20' : ''}
           >
             <IconParchment />
           </IconButton>
           <IconButton
             onClick={() => setSheetMode('inventory')}
             title="Inventory"
-            className={sheetMode === 'inventory' ? 'text-red-500 bg-red-900/20' : ''}
+            className={sheetMode === 'inventory' ? 'text-[#D32F2F] bg-red-500/10 dark:bg-red-900/20' : ''}
           >
             <IconBackpack />
           </IconButton>
           <IconButton
             onClick={() => setSheetMode('consumables')}
             title="Consumables"
-            className={sheetMode === 'consumables' ? 'text-red-500 bg-red-900/20' : ''}
+            className={sheetMode === 'consumables' ? 'text-[#D32F2F] bg-red-500/10 dark:bg-red-900/20' : ''}
           >
             <IconPotion />
           </IconButton>
@@ -189,15 +201,15 @@ function App() {
               <>
                 <CharacterHeader character={character} />
                 <StatsGrid character={character} />
-                <SkillsPanel character={character} />
+                <SkillsPanel character={character} onRoll={rollDice} />
                 <ConditionsRow character={character} />
 
-                <div className="flex bg-gray-800/30 p-1 rounded-xl border border-gray-800/50 mb-4 sticky top-0 z-20 backdrop-blur-sm">
+                <div className="flex bg-[var(--bg-input)] dark:bg-gray-800/30 p-1 rounded-xl border border-[var(--border-color)] dark:border-gray-800/50 mb-4 sticky top-0 z-20 backdrop-blur-sm transition-colors duration-300">
                   {(["Action", "Bonus", "Reaction", "Other", "Spell"] as const).map((tab) => (
                     <button
                       key={tab}
                       onClick={() => { setActiveTab(tab); setExpandedId(null); }}
-                      className={`flex-1 py-2 text-[10px] font-black uppercase tracking-wider transition-all rounded-lg ${activeTab === tab ? "text-white bg-red-600 shadow-lg shadow-red-900/20" : "text-gray-500 hover:text-gray-300"}`}
+                      className={`flex-1 py-2 text-[10px] font-black uppercase tracking-wider transition-all rounded-lg ${activeTab === tab ? "text-white bg-[var(--color-action)] shadow-lg shadow-red-900/20" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] dark:text-gray-500 dark:hover:text-gray-300"}`}
                     >
                       {tab}
                     </button>
@@ -235,6 +247,7 @@ function App() {
                               spell={spell}
                               isOpen={expandedId === `spell-${lvl}-${idx}`}
                               onClick={() => setExpandedId(expandedId === `spell-${lvl}-${idx}` ? null : `spell-${lvl}-${idx}`)}
+                              onRoll={rollDice}
                             />
                           ))}
                         </div>
@@ -247,6 +260,7 @@ function App() {
                         action={action}
                         isOpen={expandedId === `action-${idx}`}
                         onClick={() => setExpandedId(expandedId === `action-${idx}` ? null : `action-${idx}`)}
+                        onRoll={rollDice}
                       />
                     ))
                   )}
@@ -260,17 +274,37 @@ function App() {
                 </div>
               </>
             ) : sheetMode === 'inventory' ? (
-              <div className="space-y-4 pb-20">
-                <div className="flex items-center gap-3 mb-2">
-                  <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Equipment</h3>
-                  <div className="h-px flex-1 bg-gray-800"></div>
-                </div>
-                {allInventory.filter(i => i.type === 'Gear').map((item, idx) => (
-                  <div key={idx} className="bg-gray-800/40 p-3 rounded-lg border border-gray-700/30 flex justify-between items-center">
-                    <span className="text-sm font-bold text-gray-200">{item.name}</span>
-                    <Badge>x{item.quantity}</Badge>
+              <div className="space-y-6 pb-20">
+                {/* Combat Items */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-[10px] font-black text-red-500 uppercase tracking-widest">Combat Items</h3>
+                    <div className="h-px flex-1 bg-red-500/20"></div>
                   </div>
-                ))}
+                  {allInventory.filter(i => i.type === 'Gear' && i.tags.includes('Combat')).map((item, idx) => (
+                    <div key={idx} className="bg-white dark:bg-gray-800/40 p-3 rounded-lg border border-gray-200 dark:border-gray-700/30 flex justify-between items-center shadow-sm">
+                      <span className="text-sm font-bold text-gray-700 dark:text-gray-200">{item.name}</span>
+                      <Badge>x{item.quantity}</Badge>
+                    </div>
+                  ))}
+                  {allInventory.filter(i => i.type === 'Gear' && i.tags.includes('Combat')).length === 0 && (
+                    <div className="text-[10px] text-gray-500 italic px-2">No combat items equipped</div>
+                  )}
+                </div>
+
+                {/* Non-Combat Gear */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-[10px] font-black text-blue-500 uppercase tracking-widest">Non-Combat Gear</h3>
+                    <div className="h-px flex-1 bg-blue-500/20"></div>
+                  </div>
+                  {allInventory.filter(i => i.type === 'Gear' && !i.tags.includes('Combat')).map((item, idx) => (
+                    <div key={idx} className="bg-white dark:bg-gray-800/40 p-3 rounded-lg border border-gray-200 dark:border-gray-700/30 flex justify-between items-center shadow-sm">
+                      <span className="text-sm font-bold text-gray-700 dark:text-gray-200">{item.name}</span>
+                      <Badge>x{item.quantity}</Badge>
+                    </div>
+                  ))}
+                </div>
               </div>
             ) : (
               <div className="space-y-2 pb-20">
@@ -284,6 +318,7 @@ function App() {
                     item={item}
                     isOpen={expandedId === `consumable-${idx}`}
                     onClick={() => setExpandedId(expandedId === `consumable-${idx}` ? null : `consumable-${idx}`)}
+                    onRoll={rollDice}
                   />
                 ))}
                 {allInventory.filter(i => i.type === 'Consumable').length === 0 && (
@@ -297,22 +332,27 @@ function App() {
         )}
       </div>
 
-      {view === 'sheet' && pinned.length > 0 && (
-        <div className="bg-gray-900/90 backdrop-blur-md border-t border-gray-800 p-2 shrink-0 z-30 shadow-2xl">
-          <div className="flex gap-4 items-center overflow-x-auto px-2 no-scrollbar">
-            {pinned.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => { setCharId(p.id); handleFetch(p.id); }}
-                className={`relative flex flex-col items-center shrink-0 transition-all duration-300 ${p.id === charId ? 'scale-110' : 'opacity-40 hover:opacity-100'}`}
-              >
-                <img src={p.avatar} className={`w-10 h-10 rounded-full border-2 object-cover ${p.id === charId ? 'border-red-500 shadow-lg shadow-red-900/40' : 'border-gray-700'}`} alt={p.name} title={p.name} />
-                {p.id === charId && <div className="absolute -bottom-1 w-1.5 h-1.5 bg-red-500 rounded-full shadow-lg shadow-red-500/50"></div>}
-              </button>
-            ))}
+      <div className="shrink-0 z-30 shadow-2xl overflow-hidden rounded-t-3xl border-t border-gray-300 dark:border-gray-800 transition-colors duration-300">
+        <DiceLog history={history} onClear={clearHistory} />
+        <DiceQuickBar onRoll={rollDice} />
+
+        {view === 'sheet' && pinned.length > 0 && (
+          <div className="bg-[var(--bg-app)]/95 dark:bg-gray-900/90 backdrop-blur-md p-3">
+            <div className="flex gap-4 items-center overflow-x-auto px-4 py-1 no-scrollbar">
+              {pinned.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => { setCharId(p.id); handleFetch(p.id); }}
+                  className={`relative flex flex-col items-center shrink-0 transition-all duration-300 ${p.id === charId ? 'scale-110' : 'opacity-40 hover:opacity-100'}`}
+                >
+                  <img src={p.avatar} className={`w-10 h-10 rounded-full border-2 object-cover ${p.id === charId ? 'border-[#D32F2F] shadow-lg shadow-red-900/40' : 'border-gray-300 dark:border-gray-700'}`} alt={p.name} title={p.name} />
+                  {p.id === charId && <div className="absolute -bottom-1 w-1.5 h-1.5 bg-[#D32F2F] rounded-full shadow-lg shadow-red-500/50"></div>}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

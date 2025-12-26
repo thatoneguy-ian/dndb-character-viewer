@@ -505,13 +505,17 @@ export function getInventory(character: DDBCharacter): InventoryItem[] {
     const type: "Consumable" | "Gear" = (def.filterType === "Potion" || def.filterType === "Scroll" || def.isConsumable)
       ? "Consumable"
       : "Gear";
+    const isCombat = def.filterType === "Weapon" || def.filterType === "Armor" || def.filterType === "Ammunition" || def.filterType === "Shield";
+    const tags = [def.filterType, def.subType].filter((t): t is string => !!t);
+    if (isCombat) tags.push("Combat");
+
     return {
       id: item.id,
       name: def.name,
       quantity: item.quantity,
       description: def.description,
       type: type,
-      tags: [def.filterType, def.subType].filter((t): t is string => !!t)
+      tags: tags
     };
   }).sort((a, b) => a.name.localeCompare(b.name));
 }

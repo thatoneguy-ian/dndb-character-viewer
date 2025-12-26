@@ -18,10 +18,10 @@ export const Button: React.FC<ButtonProps> = ({
     const baseStyles = "inline-flex items-center justify-center font-bold rounded transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed";
 
     const variants = {
-        primary: "bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-900/20",
-        secondary: "bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700",
-        danger: "bg-red-900/20 hover:bg-red-900/40 text-red-400 border border-red-500/50",
-        ghost: "bg-transparent hover:bg-gray-800 text-gray-400 hover:text-white"
+        primary: "bg-[var(--color-action)] hover:brightness-110 text-white shadow-lg shadow-black/10",
+        secondary: "bg-[var(--bg-input)] hover:bg-[var(--bg-app)] text-[var(--text-primary)] border border-[var(--border-color)]",
+        danger: "bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-[var(--color-danger)] border border-red-200 dark:border-red-500/50",
+        ghost: "bg-transparent hover:bg-[var(--bg-input)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
     };
 
     const sizes = {
@@ -48,32 +48,41 @@ export const Card: React.FC<{ children: React.ReactNode; className?: string; onC
 }) => (
     <div
         onClick={onClick}
-        className={`bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-lg overflow-hidden transition-all duration-300 ${onClick ? 'cursor-pointer hover:border-gray-500 hover:bg-gray-800/80' : ''} ${className}`}
+        className={`bg-[var(--bg-card)] backdrop-blur-sm border border-[var(--border-color)] rounded-lg overflow-hidden transition-all duration-300 ${onClick ? 'cursor-pointer hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-app)]/50 shadow-md shadow-black/5' : 'shadow-sm shadow-black/5'} ${className}`}
     >
         {children}
     </div>
 );
 
 // --- BADGE ---
-export const Badge: React.FC<{ children: React.ReactNode; color?: 'red' | 'blue' | 'green' | 'gray' | 'yellow'; className?: string }> = ({
+export const Badge: React.FC<{
+    children: React.ReactNode;
+    color?: 'red' | 'blue' | 'green' | 'gray' | 'yellow';
+    className?: string;
+    onClick?: (e: React.MouseEvent) => void;
+}> = ({
     children,
     color = 'gray',
-    className = ''
+    className = '',
+    onClick
 }) => {
-    const colors = {
-        red: "bg-red-900/40 text-red-400 border-red-500/30",
-        blue: "bg-blue-900/40 text-blue-400 border-blue-500/30",
-        green: "bg-green-900/40 text-green-400 border-green-500/30",
-        gray: "bg-gray-700/50 text-gray-400 border-gray-600/30",
-        yellow: "bg-yellow-900/40 text-yellow-400 border-yellow-500/30"
-    };
+        const colors = {
+            red: "bg-red-50 text-[var(--color-danger)] border-red-200 dark:bg-red-900/40 dark:text-red-400 dark:border-red-500/30",
+            blue: "bg-blue-50 text-[#172B4D] dark:text-blue-400 border-blue-200 dark:border-blue-500/30",
+            green: "bg-green-50 text-[var(--text-success)] border-green-200 dark:bg-green-900/40 dark:text-green-400 dark:border-green-500/30",
+            gray: "bg-[var(--bg-input)] text-[var(--text-secondary)] border-[var(--border-color)]",
+            yellow: "bg-yellow-50 text-yellow-800 border-yellow-200 dark:bg-yellow-900/40 dark:text-yellow-400 dark:border-yellow-500/30"
+        };
 
-    return (
-        <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${colors[color]} ${className}`}>
-            {children}
-        </span>
-    );
-};
+        return (
+            <div
+                onClick={onClick}
+                className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold border ${colors[color]} ${onClick ? 'cursor-pointer hover:brightness-110' : ''} ${className}`}
+            >
+                {children}
+            </div>
+        );
+    };
 
 // --- ICON BUTTON ---
 export const IconButton: React.FC<ButtonProps & { title?: string }> = ({
@@ -82,7 +91,10 @@ export const IconButton: React.FC<ButtonProps & { title?: string }> = ({
     ...props
 }) => (
     <button
-        className={`p-2 rounded-full text-gray-400 hover:text-white hover:bg-gray-800 transition-all duration-200 ${className}`}
+        className={`p-2 rounded-full transition-all duration-200 
+            text-[var(--text-secondary)] 
+            hover:text-[var(--text-primary)] 
+            hover:bg-[var(--bg-input)] ${className}`}
         {...props}
     >
         {children}
