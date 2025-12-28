@@ -65,8 +65,8 @@ export function ConditionsRow({ character }: { character: DDBCharacter | null })
     return (
         <div className="mb-4">
             <div className="flex items-center gap-2 mb-2">
-                <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Conditions</div>
-                <span className="bg-red-600 text-[10px] font-black text-white px-2 py-0.5 rounded-full shadow-lg shadow-red-900/20">
+                <div className="text-[10px] font-black text-[var(--text-secondary)] uppercase tracking-widest">Conditions</div>
+                <span className="bg-[var(--color-action)] text-[10px] font-black text-white px-2 py-0.5 rounded-full shadow-lg">
                     {activeDefs.length}
                 </span>
             </div>
@@ -75,37 +75,37 @@ export function ConditionsRow({ character }: { character: DDBCharacter | null })
                     <button
                         key={c.key}
                         onClick={(e) => { e.stopPropagation(); setOpen(c); }}
-                        className="w-9 h-9 rounded-lg flex items-center justify-center bg-gray-800/80 border border-gray-700/50 hover:bg-gray-700 hover:border-gray-500 transition-all duration-200 transform hover:scale-110 shadow-md"
+                        className="w-9 h-9 rounded-lg flex items-center justify-center bg-[var(--bg-card)] border border-[var(--border-color)] hover:border-[var(--text-secondary)]/50 transition-all duration-200 transform hover:scale-110 shadow-md"
                         title={c.label}
                     >
-                        <ConditionIcon name={c.key} className="w-6 h-6 text-white" />
+                        <ConditionIcon name={c.key} className="w-6 h-6 text-[var(--text-primary)]" />
                     </button>
                 ))}
             </div>
 
             {open && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
-                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setOpen(null)} />
-                    <div className="relative bg-gray-900 border border-gray-700 rounded-2xl p-6 w-full max-w-sm text-sm text-gray-200 shadow-2xl animate-in zoom-in-95 duration-200">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setOpen(null)} />
+                    <div className="relative bg-[var(--bg-card)] border border-[var(--border-color)] rounded-2xl p-6 w-full max-w-sm text-sm text-[var(--text-primary)] shadow-2xl animate-in zoom-in-95 duration-200">
                         <div className="flex justify-between items-start mb-4">
                             <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 rounded-xl bg-gray-800 flex items-center justify-center border border-gray-700">
-                                    <ConditionIcon name={open.key} className="w-8 h-8 text-white" />
+                                <div className="w-12 h-12 rounded-xl bg-[var(--bg-input)] flex items-center justify-center border border-[var(--border-color)]">
+                                    <ConditionIcon name={open.key} className="w-8 h-8 text-[var(--text-primary)]" />
                                 </div>
                                 <div>
-                                    <div className="font-black text-white text-xl uppercase tracking-tight">{open.label}</div>
-                                    <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Active Condition</div>
+                                    <div className="font-black text-[var(--text-primary)] text-xl uppercase tracking-tight">{open.label}</div>
+                                    <div className="text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-widest">Active Condition</div>
                                 </div>
                             </div>
-                            <button onClick={() => setOpen(null)} className="p-1 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-white">✕</button>
+                            <button onClick={() => setOpen(null)} className="p-1 hover:bg-[var(--bg-input)] rounded-lg transition-colors text-[var(--text-secondary)] hover:text-[var(--text-primary)]">✕</button>
                         </div>
-                        <div className="whitespace-pre-line text-xs text-gray-300 leading-relaxed bg-gray-800/40 p-3 rounded-xl border border-gray-700/50 mb-4">
+                        <div className="whitespace-pre-line text-xs text-[var(--text-secondary)] leading-relaxed bg-[var(--bg-app)]/40 p-3 rounded-xl border border-[var(--border-color)]/50 mb-4">
                             {open.description}
                         </div>
-                        <div className="text-[10px] text-gray-500 italic flex items-center gap-2">
-                            <div className="h-px flex-1 bg-gray-800"></div>
+                        <div className="text-[10px] text-[var(--text-secondary)] italic flex items-center gap-2">
+                            <div className="h-px flex-1 bg-[var(--border-color)]"></div>
                             <span>Rules Summary</span>
-                            <div className="h-px flex-1 bg-gray-800"></div>
+                            <div className="h-px flex-1 bg-[var(--border-color)]"></div>
                         </div>
                     </div>
                 </div>

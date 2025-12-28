@@ -1,5 +1,6 @@
 import { MarkdownDescription } from './MarkdownDescription';
 import type { Spell } from '../../types/character';
+import type { DDBCharacter } from '../../types/dnd-beyond';
 import { Card, Badge } from '../common';
 import { SCHOOL_ICON_MAP, ConcentrationIcon } from '../spell-icons';
 
@@ -8,9 +9,10 @@ interface SpellItemProps {
     isOpen: boolean;
     onClick: () => void;
     onRoll: (notation: string, label?: string) => void;
+    character?: DDBCharacter | null;
 }
 
-export const SpellItem: React.FC<SpellItemProps> = ({ spell, isOpen, onClick, onRoll }) => {
+export const SpellItem: React.FC<SpellItemProps> = ({ spell, isOpen, onClick, onRoll, character }) => {
     const IconComp = SCHOOL_ICON_MAP[spell.school] as any;
     const isConcentration = spell.components.toLowerCase().includes('concentration');
 
@@ -32,7 +34,7 @@ export const SpellItem: React.FC<SpellItemProps> = ({ spell, isOpen, onClick, on
                         <span className="text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-widest">
                             {spell.castingTime}
                         </span>
-                        <span className="text-gray-400 dark:text-gray-700">•</span>
+                        <span className="text-[var(--text-secondary)] opacity-50">•</span>
                         <span className="text-[10px] text-[var(--text-secondary)] font-medium">{spell.range}</span>
                     </div>
                 </div>
@@ -67,7 +69,7 @@ export const SpellItem: React.FC<SpellItemProps> = ({ spell, isOpen, onClick, on
                         <div className="mb-4 bg-[var(--bg-card)] dark:bg-gray-900/50 p-3 rounded-lg border border-[var(--border-color)]/50 shadow-inner">
                             <div className="font-black text-[10px] uppercase tracking-widest mb-2 flex justify-between text-[var(--text-primary)] dark:text-white">
                                 <span>{spell.summonStats.name}</span>
-                                <span className="text-[#5E6C84] dark:text-gray-500">Summoned Entity</span>
+                                <span className="text-[var(--text-secondary)]">Summoned Entity</span>
                             </div>
                             <div className="grid grid-cols-3 gap-2 mb-3">
                                 <div className="bg-[var(--bg-input)] dark:bg-gray-800/80 p-1.5 rounded text-center">
@@ -96,7 +98,7 @@ export const SpellItem: React.FC<SpellItemProps> = ({ spell, isOpen, onClick, on
 
                     <div className="font-black text-[10px] uppercase tracking-widest mb-1 italic opacity-50 text-[var(--text-primary)] dark:text-white">Combined Description</div>
                     <div className="bg-[var(--bg-card)] p-3 rounded-lg border border-[var(--border-color)]/50 shadow-inner">
-                        <MarkdownDescription content={spell.description} onRoll={onRoll} />
+                        <MarkdownDescription content={spell.description} onRoll={onRoll} character={character} name={spell.name} />
                     </div>
 
                     {spell.tags && spell.tags.length > 0 && (

@@ -248,6 +248,7 @@ function App() {
                               isOpen={expandedId === `spell-${lvl}-${idx}`}
                               onClick={() => setExpandedId(expandedId === `spell-${lvl}-${idx}` ? null : `spell-${lvl}-${idx}`)}
                               onRoll={rollDice}
+                              character={character}
                             />
                           ))}
                         </div>
@@ -261,6 +262,7 @@ function App() {
                         isOpen={expandedId === `action-${idx}`}
                         onClick={() => setExpandedId(expandedId === `action-${idx}` ? null : `action-${idx}`)}
                         onRoll={rollDice}
+                        character={character}
                       />
                     ))
                   )}
@@ -319,6 +321,7 @@ function App() {
                     isOpen={expandedId === `consumable-${idx}`}
                     onClick={() => setExpandedId(expandedId === `consumable-${idx}` ? null : `consumable-${idx}`)}
                     onRoll={rollDice}
+                    character={character}
                   />
                 ))}
                 {allInventory.filter(i => i.type === 'Consumable').length === 0 && (

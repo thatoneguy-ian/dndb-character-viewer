@@ -30,7 +30,7 @@ export const SkillsPanel: React.FC<SkillsPanelProps> = ({ character, onRoll }) =
             </button>
 
             <div className={`transition-all duration-300 ease-in-out ${isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
-                <div className="p-3 border-t border-gray-300 dark:border-gray-800/50 bg-[#EBECF0]/30 dark:bg-gray-900/30">
+                <div className="p-3 border-t border-[var(--border-color)] bg-[var(--bg-app)]/30">
                     <div className="flex justify-end mb-2">
                         <button
                             onClick={() => setSortMode(sortMode === 'name' ? 'bonus' : 'name')}
