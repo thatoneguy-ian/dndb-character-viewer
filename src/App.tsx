@@ -18,6 +18,7 @@ import { CharacterListView } from './components/character/CharacterListView';
 import { CharacterHeader } from './components/character/CharacterHeader';
 import { StatsGrid } from './components/character/StatsGrid';
 import { SkillsPanel } from './components/character/SkillsPanel';
+import { SavingThrowsPanel } from './components/character/SavingThrowsPanel';
 import { ConditionsRow } from './components/character/ConditionsRow';
 import { SpellSlotBar } from './components/character/SpellSlotBar';
 import { FilterControls } from './components/character/FilterControls';
@@ -201,6 +202,7 @@ function App() {
               <>
                 <CharacterHeader character={character} />
                 <StatsGrid character={character} />
+                <SavingThrowsPanel character={character} onRoll={rollDice} />
                 <SkillsPanel character={character} onRoll={rollDice} />
                 <ConditionsRow character={character} />
 

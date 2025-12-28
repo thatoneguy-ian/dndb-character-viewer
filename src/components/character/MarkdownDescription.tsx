@@ -7,13 +7,14 @@ interface MarkdownDescriptionProps {
     onRoll: (notation: string) => void;
     character?: DDBCharacter | null;
     name?: string;
+    className?: string;
 }
 
-export const MarkdownDescription = ({ content, onRoll, character, name }: MarkdownDescriptionProps) => {
+export const MarkdownDescription = ({ content, onRoll, character, name, className }: MarkdownDescriptionProps) => {
     if (!content) return null;
 
     // Resolve DDB placeholder tags first
-    const resolvedContent = character ? resolveDDBTags(content, character, name) : content;
+    const resolvedContent = character ? resolveDDBTags(content, character, name, className) : content;
 
     // Regex for dice notation (e.g. 1d20, 2d6+4, d8 + 1)
     const diceRegex = /(\b\d*d\d+(?:\s*[+-]\s*\d+)?\b)/gi;

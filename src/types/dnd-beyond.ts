@@ -116,6 +116,17 @@ export interface DDBAction {
   range?: {
     rangeValue: number;
   };
+  isProficient?: boolean;
+  attackBonusModifierTotal?: number;
+  dice?: {
+    diceString: string;
+    diceCount: number;
+    diceValue: number;
+    fixedValue: number;
+  };
+  displayAsAttack?: boolean;
+  isAttack?: boolean;
+  abilityModifierStatId?: number;
 }
 
 export interface DDBSpell {
@@ -155,4 +166,15 @@ export interface DDBSpellSlot {
   used: number;
   max: number | null;
   available: number | null;
+}
+
+export interface DDBCharacterListItem {
+  id: number;
+  name: string;
+  avatarUrl: string | null;
+  latestFullCharacterUrl: string;
+  gender: string | null;
+  race: string | null;
+  classesString: string | null;
+  level: number;
 }

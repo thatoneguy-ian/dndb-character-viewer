@@ -53,6 +53,7 @@ export interface Action {
     damage: string;
     range: string;
     attackType: string;
+    className?: string;
 }
 
 export interface Spell {
@@ -70,6 +71,7 @@ export interface Spell {
     attackType: string;
     tags?: string[];
     summonStats?: SummonStats | null;
+    className?: string;
 }
 
 export interface InventoryItem {

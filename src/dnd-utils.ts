@@ -62,7 +62,7 @@ export function getProficiencyBonus(character: DDBCharacter): number {
 
 // --- TAG RESOLUTION ---
 
-export function resolveDDBTags(text: string, character: DDBCharacter, contextName?: string): string {
+export function resolveDDBTags(text: string, character: DDBCharacter, contextName?: string, className?: string): string {
   if (!text || !character) return text || "";
 
   const totalLevel = character.classes.reduce((acc, c) => acc + (c.level || 0), 0);
@@ -77,8 +77,19 @@ export function resolveDDBTags(text: string, character: DDBCharacter, contextNam
 
     // Replace level variables
     cleanExpr = cleanExpr.replace(/\blevel\b/g, totalLevel.toString());
-    cleanExpr = cleanExpr.replace(/\bclasslevel\b/g, totalLevel.toString());
     cleanExpr = cleanExpr.replace(/\bcharacterlevel\b/g, totalLevel.toString());
+    cleanExpr = cleanExpr.replace(/\bclasslevel\b/g, () => {
+      if (className) {
+        const cl = character.classes.find(c => (c.definition?.name || "").toLowerCase() === className.toLowerCase())?.level;
+        if (cl) return cl.toString();
+      }
+      // Common fallback: Sneak Attack (always Rogue)
+      if (contextName?.toLowerCase().includes('sneak attack')) {
+        const rl = character.classes.find(c => c.definition?.name === 'Rogue')?.level;
+        if (rl) return rl.toString();
+      }
+      return totalLevel.toString();
+    });
 
     // Replace ability mods: e.g. {{abilitymod:str}}
     cleanExpr = cleanExpr.replace(/\babilitymod:(\w+)\b/g, (_m: string, ab: string) => {
@@ -203,6 +214,59 @@ export function getSkills(character: DDBCharacter): Skill[] {
       bonusValue: bonus
     };
   });
+}
+
+// --- SAVING THROWS ---
+export function getSavingThrows(character: DDBCharacter): Skill[] {
+  const totalLevel = character.classes.reduce((acc: number, c: any) => acc + c.level, 0);
+  const profBonus = Math.ceil(1 + (totalLevel / 4));
+  const mods = getAllModifiers(character);
+
+  return [1, 2, 3, 4, 5, 6].map((statId) => {
+    const name = ABILITY_MAP[statId];
+    let bonus = getModifier(getStatValue(character, statId));
+    const subType = `${name.toLowerCase()}-saving-throws`;
+
+    const proficient = mods.find((m: DDBModifier) => m.type === "proficiency" && m.subType === subType);
+    if (proficient) bonus += profBonus;
+
+    // Specific bonuses for this ability's save
+    mods.filter((m: DDBModifier) => m.type === "bonus" && m.subType === subType)
+      .forEach((m: DDBModifier) => bonus += m.value);
+
+    // Global bonuses to all saving throws
+    mods.filter((m: DDBModifier) => m.type === "bonus" && (m.subType === "saving-throws" || m.subType === "saving-throws-bonus"))
+      .forEach((m: DDBModifier) => bonus += m.value);
+
+    return {
+      name,
+      bonus: bonus >= 0 ? `+${bonus}` : `${bonus}`,
+      bonusValue: bonus
+    };
+  });
+}
+
+// --- INITIATIVE ---
+export function getInitiative(character: DDBCharacter): string {
+  let bonus = getModifier(getStatValue(character, 2)); // DEX
+  const mods = getAllModifiers(character);
+
+  mods.filter((m: DDBModifier) => m.type === "bonus" && m.subType === "initiative")
+    .forEach((m: DDBModifier) => bonus += m.value);
+
+  return bonus >= 0 ? `+${bonus}` : `${bonus}`;
+}
+
+// --- PASSIVE STATS ---
+export function getPassiveStats(character: DDBCharacter) {
+  const skills = getSkills(character);
+  const getSkillBonus = (name: string) => skills.find(s => s.name === name)?.bonusValue || 0;
+
+  return {
+    perception: 10 + getSkillBonus("Perception"),
+    insight: 10 + getSkillBonus("Insight"),
+    investigation: 10 + getSkillBonus("Investigation")
+  };
 }
 
 // --- HP & AC ---
@@ -369,7 +433,7 @@ export function getActions(character: DDBCharacter): Action[] {
   const dexMod = getModifier(getStatValue(character, 2));
   const isMonk = character.classes.some((c: any) => c.definition.name === "Monk");
 
-  const processList = (list: DDBAction[], sourceName: string): void => {
+  const processList = (list: DDBAction[], sourceName: string, className?: string): void => {
     if (!list) return;
     list.forEach((item) => {
       let type: Action["type"] = "Other";
@@ -387,25 +451,54 @@ export function getActions(character: DDBCharacter): Action[] {
         if (max) limit = `(${remaining}/${max})`;
       }
 
+      let hitOrDc = limit;
+      let damage = "";
+
+      if (item.isAttack || item.attackBonusModifierTotal != null || item.dice?.diceString) {
+        if (item.isAttack || item.attackBonusModifierTotal != null) {
+          let bonus = (item.attackBonusModifierTotal || 0) + (item.isProficient ? profBonus : 0);
+
+          if (item.abilityModifierStatId) {
+            bonus += getModifier(getStatValue(character, item.abilityModifierStatId));
+          } else if (item.isAttack) {
+            // Fallback for attacks missing ability ID - use monk-friendly or general default
+            bonus += (isMonk ? Math.max(strMod, dexMod) : strMod);
+          }
+
+          hitOrDc = bonus >= 0 ? `+${bonus}` : `${bonus}`;
+        }
+
+        if (item.dice?.diceString) {
+          damage = item.dice.diceString;
+          // Clean common DDB artifacts
+          damage = damage.replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+        }
+      }
+
       allActions.push({
         id: item.id || item.name,
         name: item.name,
         description: item.snippet || item.description || "",
         type,
         source: sourceName,
-        hitOrDc: limit,
-        damage: "",
+        hitOrDc,
+        damage,
         range: item.range && item.range.rangeValue ? `${item.range.rangeValue}ft` : "",
-        attackType: sourceName
+        attackType: sourceName,
+        className
       });
     });
   };
 
   if (character.actions) {
     processList(character.actions.race, "Race Feature");
-    processList(character.actions.class, "Class Feature");
     processList(character.actions.feat, "Feat");
     processList(character.actions.item, "Item");
+
+    // For class actions, if we can match them to classes...
+    // For now, let's look for actions and try to infer.
+    // DDB's flat list character.actions.class is tricky.
+    processList(character.actions.class, "Class Feature");
   }
   if (character.customActions) processList(character.customActions, "Custom");
 
@@ -502,7 +595,7 @@ const PREPARED_CASTERS = ["Cleric", "Druid", "Wizard", "Paladin", "Artificer"];
 export function getSpells(character: DDBCharacter): Spell[] {
   const spells: Spell[] = [];
 
-  const processSpells = (list: DDBSpell[], source: string): void => {
+  const processSpells = (list: DDBSpell[], source: string, className?: string): void => {
     if (!list) return;
     const safeSource = source || "Unknown";
     const isPreparedClass = PREPARED_CASTERS.some(c => safeSource.includes(c));
@@ -553,7 +646,8 @@ export function getSpells(character: DDBCharacter): Spell[] {
         damage: dmg,
         attackType: attackType,
         tags: tags,
-        summonStats: summonData
+        summonStats: summonData,
+        className
       });
     });
   };
@@ -561,7 +655,7 @@ export function getSpells(character: DDBCharacter): Spell[] {
   if (character.classSpells) {
     character.classSpells.forEach((cls: any) => {
       const className = cls.name || cls.definition?.name || "Class";
-      processSpells(cls.spells, className);
+      processSpells(cls.spells, className, className);
     });
   }
   if (character.spells) {

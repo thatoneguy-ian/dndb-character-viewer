@@ -98,7 +98,7 @@ export const SpellItem: React.FC<SpellItemProps> = ({ spell, isOpen, onClick, on
 
                     <div className="font-black text-[10px] uppercase tracking-widest mb-1 italic opacity-50 text-[var(--text-primary)] dark:text-white">Combined Description</div>
                     <div className="bg-[var(--bg-card)] p-3 rounded-lg border border-[var(--border-color)]/50 shadow-inner">
-                        <MarkdownDescription content={spell.description} onRoll={onRoll} character={character} name={spell.name} />
+                        <MarkdownDescription content={spell.description} onRoll={onRoll} character={character} name={spell.name} className={spell.className} />
                     </div>
 
                     {spell.tags && spell.tags.length > 0 && (
