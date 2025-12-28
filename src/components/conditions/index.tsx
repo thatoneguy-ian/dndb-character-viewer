@@ -1,84 +1,42 @@
-import * as React from 'react';
+import { CONDITION_SVGS } from '../../assets/conditions-svgs';
 
 export interface IconProps {
   className?: string;
   title?: string;
 }
 
-// Import inline icon components (tintable via CSS `color` when using `fill="currentColor"`)
-import BlindedIcon from './icons/BlindedIcon';
-import CharmedIcon from './icons/CharmedIcon';
-import DeafenedIcon from './icons/DeafenedIcon';
-import FrightenedIcon from './icons/FrightenedIcon';
-import GrappledIcon from './icons/GrappledIcon';
-import IncapacitatedIcon from './icons/IncapacitatedIcon';
-import InvisibleIcon from './icons/InvisibleIcon';
-import ParalyzedIcon from './icons/ParalyzedIcon';
-import PetrifiedIcon from './icons/PetrifiedIcon';
-import PoisonedIcon from './icons/PoisonedIcon';
-import ProneIcon from './icons/ProneIcon';
-import RestrainedIcon from './icons/RestrainedIcon';
-import StunnedIcon from './icons/StunnedIcon';
-import UnconsciousIcon from './icons/UnconsciousIcon';
-
-export {
-  BlindedIcon,
-  CharmedIcon,
-  DeafenedIcon,
-  FrightenedIcon,
-  GrappledIcon,
-  IncapacitatedIcon,
-  InvisibleIcon,
-  ParalyzedIcon,
-  PetrifiedIcon,
-  PoisonedIcon,
-  ProneIcon,
-  RestrainedIcon,
-  StunnedIcon,
-  UnconsciousIcon,
-};
-
-const ICON_MAP: Record<string, (props: React.SVGProps<SVGSVGElement>) => React.ReactElement> = {
-  blinded: BlindedIcon,
-  charmed: CharmedIcon,
-  deafened: DeafenedIcon,
-  frightened: FrightenedIcon,
-  grappled: GrappledIcon,
-  incapacitated: IncapacitatedIcon,
-  invisible: InvisibleIcon,
-  paralyzed: ParalyzedIcon,
-  petrified: PetrifiedIcon,
-  poisoned: PoisonedIcon,
-  prone: ProneIcon,
-  restrained: RestrainedIcon,
-  stunned: StunnedIcon,
-  unconscious: UnconsciousIcon,
-};
-
 export function ConditionIcon({ name, className, title }: { name: string } & IconProps) {
-  const key = name.toLowerCase();
-  const Icon = ICON_MAP[key];
-  if (Icon) {
-    if (title) return (
-      <Icon className={className}>
-        <title>{title}</title>
-      </Icon>
+  const key = name.toLowerCase().replace(/\s+/g, '-');
+  const iconData = CONDITION_SVGS[key];
+
+  if (!iconData) {
+    // Fallback to a generic icon if the condition is not found
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={className}
+      >
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="8" x2="12" y2="12" />
+        <line x1="12" y1="16" x2="12.01" y2="16" />
+      </svg>
     );
-    return <Icon className={className} />;
   }
 
-  // fallback to loading the raw asset (keeps backwards compatibility)
-  const fileName = key;
-  const src = new URL(`../../assets/raw-svg/${fileName}.svg`, import.meta.url).href;
   return (
-    <img
-      src={src}
-      alt={title || name}
-      title={title || name}
+    <svg
+      viewBox={iconData.viewBox}
       className={className}
-      style={{ width: '1.25rem', height: '1.25rem', objectFit: 'contain', color: 'currentColor' }}
-      aria-hidden={title ? undefined : true}
-    />
+      fill="currentColor"
+      dangerouslySetInnerHTML={{ __html: iconData.content }}
+    >
+      {title && <title>{title}</title>}
+    </svg>
   );
 }
 

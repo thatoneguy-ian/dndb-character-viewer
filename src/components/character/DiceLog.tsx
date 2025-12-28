@@ -52,7 +52,7 @@ export const DiceLog = ({ history, onClear }: DiceLogProps) => {
                                             key={i}
                                             sides={r.sides}
                                             value={r.value}
-                                            className="w-5 h-5"
+                                            className="w-9 h-9"
                                             style={{ color: isLatest ? 'var(--color-action)' : 'var(--text-secondary)' }}
                                         />
                                     ))}
@@ -66,11 +66,13 @@ export const DiceLog = ({ history, onClear }: DiceLogProps) => {
                                     )}
                                 </div>
                             </div>
-                            <div className={`text-xl font-black px-3 py-1 rounded-md border text-center min-w-[44px] shadow-inner transition-all
-                                ${isLatest
-                                    ? 'text-white bg-[var(--color-action)] border-[var(--color-action)]'
-                                    : 'text-[var(--text-primary)] bg-[var(--bg-input)] border-[var(--border-color)]'
-                                }`}
+                            <div
+                                className="text-xl font-black px-3 py-1 rounded-md border text-center min-w-[44px] shadow-inner transition-all"
+                                style={{
+                                    backgroundColor: isLatest ? 'var(--text-primary)' : 'var(--bg-input)',
+                                    color: isLatest ? 'var(--bg-card)' : 'var(--text-primary)',
+                                    borderColor: isLatest ? 'var(--text-primary)' : 'var(--border-color)'
+                                }}
                             >
                                 {roll.total}
                             </div>

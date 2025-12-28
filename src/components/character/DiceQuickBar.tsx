@@ -16,10 +16,10 @@ export const DiceQuickBar = ({ onRoll }: DiceQuickBarProps) => {
                     onClick={() => onRoll(`1d${d}`)}
                     className="flex flex-col items-center gap-1 group active:scale-90 transition-transform"
                 >
-                    <div className="w-8 h-8 rounded-lg bg-[var(--bg-input)] border border-[var(--border-color)] flex items-center justify-center group-hover:border-[var(--color-action)]/50 group-hover:bg-[var(--bg-card)] transition-colors shadow-sm shadow-black/5">
-                        <DiceIcon sides={d} className="w-5 h-5 text-[var(--text-secondary)] group-hover:text-[var(--color-action)] transition-colors" />
+                    <div className="w-14 h-14 rounded-xl bg-[var(--bg-input)] border border-[var(--border-color)] flex items-center justify-center group-hover:border-[var(--color-action)]/50 group-hover:bg-[var(--bg-card)] transition-colors shadow-sm shadow-black/5">
+                        <DiceIcon sides={d} className="w-9 h-9 text-[var(--text-secondary)] group-hover:text-[var(--color-action)] transition-colors" />
                     </div>
-                    <span className="text-[10px] font-black text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] transition-colors">d{d}</span>
+                    <span className="text-[12px] font-black text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] transition-colors">d{d}</span>
                 </button>
             ))}
         </div>

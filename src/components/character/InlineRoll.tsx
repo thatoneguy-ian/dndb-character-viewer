@@ -16,10 +16,10 @@ export const InlineRoll = ({ notation, onRoll }: InlineRollProps) => {
                 e.stopPropagation();
                 onRoll(notation);
             }}
-            className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-red-600/10 hover:bg-red-600/20 border border-red-500/20 rounded text-red-400 font-black text-[10px] transition-all active:scale-95 cursor-pointer mx-0.5"
+            className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-[var(--color-action)]/10 hover:bg-[var(--color-action)]/20 border border-[var(--color-action)]/20 rounded text-[var(--color-action)] font-black text-[12px] transition-all active:scale-95 cursor-pointer mx-0.5"
             title={`Roll ${notation}`}
         >
-            <DiceIcon sides={sides} className="w-3 h-3 transition-transform group-hover:rotate-12" />
+            <DiceIcon sides={sides} className="w-5 h-5 transition-transform group-hover:rotate-12" />
             <span>{notation}</span>
         </button>
     );
