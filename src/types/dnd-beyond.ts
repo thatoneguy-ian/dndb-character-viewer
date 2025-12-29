@@ -1,6 +1,7 @@
 export interface DDBCharacter {
   id: number;
   name: string;
+  startingClassId: number;
   decorations?: {
     avatarUrl?: string;
   };
@@ -50,6 +51,7 @@ export interface DDBClassFeature {
 export interface DDBClass {
   id: number;
   level: number;
+  isStartingClass: boolean;
   definition: {
     id: number;
     name: string;
@@ -67,8 +69,10 @@ export interface DDBStat {
 }
 
 export interface DDBModifier {
+  id: string;
   type: string;
   subType: string;
+  isGranted: boolean;
   entityId: number | null;
   componentId: number | null;
   componentTypeId: number | null;

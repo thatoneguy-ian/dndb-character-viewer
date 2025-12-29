@@ -33,6 +33,7 @@ export interface Skill {
     name: string;
     bonus: string;
     bonusValue: number;
+    isProficient?: boolean;
 }
 
 export interface SpellSlot {

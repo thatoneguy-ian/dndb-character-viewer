@@ -33,13 +33,15 @@ function getStatValue(character: DDBCharacter, statId: number): number {
 }
 
 function getAllModifiers(character: DDBCharacter): DDBModifier[] {
-  return [
+  const mods = [
     ...(character.modifiers.race || []),
     ...(character.modifiers.class || []),
     ...(character.modifiers.feat || []),
     ...(character.modifiers.item || []),
     ...(character.modifiers.background || [])
   ];
+  // Filter for ONLY granted modifiers (some choices like optional class features might be in the JSON but not granted)
+  return mods.filter(m => m && m.isGranted !== false);
 }
 
 export function getAbilityScore(character: DDBCharacter, statId: number): number {
@@ -230,7 +232,8 @@ export function getSkills(character: DDBCharacter): Skill[] {
     return {
       name,
       bonus: bonus >= 0 ? `+${bonus}` : `${bonus}`,
-      bonusValue: bonus
+      bonusValue: bonus,
+      isProficient: !!(proficient || expertise)
     };
   });
 }
@@ -241,30 +244,60 @@ export function getSavingThrows(character: DDBCharacter): Skill[] {
   const profBonus = Math.ceil(1 + (totalLevel / 4));
   const rawMods = getAllModifiers(character);
 
+  // Identify the starting class
+  const startingClass = character.classes.find(c =>
+    c.definition.id === character.startingClassId || c.isStartingClass === true
+  ) || character.classes[0];
+
+  // Identify core "Proficiencies" feature ID for the starting class
+  const startingProfFeatureId = startingClass?.classFeatures?.find(f => {
+    const name = f.definition.name.toLowerCase();
+    return name === "proficiencies" || name === "starting proficiencies";
+  })?.definition.id;
+
+  // Identify all core "Proficiencies" features from multiclassed classes to filter them out
+  const multiclassProfIds = new Set<number>();
+  character.classes.forEach(c => {
+    if (c === startingClass) return;
+    c.classFeatures?.forEach(f => {
+      if (f.definition.name.toLowerCase().includes("proficiencies")) {
+        multiclassProfIds.add(f.definition.id);
+      }
+    });
+  });
+
+  // Filter modifiers for saving throws
+  // 1. Keep all non-proficiency modifiers
+  // 2. Keep proficiency modifiers that are NOT core class proficiencies from multiclassing
+  // 3. Ensure uniqueness by ID (or composite key for mods without IDs)
+  const uniqueModsMap = new Map<string, DDBModifier>();
+  rawMods.forEach(m => {
+    // Determine if this is a core class proficiency from a multiclass
+    let keep = true;
+    if (m.type === "proficiency" && m.subType.endsWith("-saving-throws")) {
+      // Core Class Proficiencies have componentTypeId 12168134
+      if (m.componentTypeId === 12168134) {
+        // Only keep if it's from the starting class
+        if (m.componentId !== startingProfFeatureId) {
+          keep = false;
+        }
+      }
+    }
+
+    if (keep) {
+      const key = m.id || `${m.type}-${m.subType}-${m.value}-${m.componentId}`;
+      if (!uniqueModsMap.has(key)) {
+        uniqueModsMap.set(key, m);
+      }
+    }
+  });
+
+  const mods = Array.from(uniqueModsMap.values());
+
   const FULL_NAMES: Record<string, string> = {
     "STR": "strength", "DEX": "dexterity", "CON": "constitution",
     "INT": "intelligence", "WIS": "wisdom", "CHA": "charisma"
   };
-
-  // Identify core proficiency feature IDs for all classes
-  const coreProfFeatureIds = character.classes.map(c =>
-    c.classFeatures?.find(f => f.definition.name === "Proficiencies")?.definition.id
-  ).filter(Boolean);
-
-  const multiclassProfIds = coreProfFeatureIds.slice(1);
-
-  // Filter modifiers for saving throws
-  const mods = rawMods.filter(m => {
-    // If it's not a saving throw proficiency, keep it
-    if (m.type !== "proficiency" || !m.subType.endsWith("-saving-throws")) return true;
-
-    // If it's a proficiency from a MULTICLASS core "Proficiencies" feature, skip it
-    if (m.componentId !== null && multiclassProfIds.includes(m.componentId)) {
-      return false;
-    }
-
-    return true;
-  });
 
   return [1, 2, 3, 4, 5, 6].map((statId) => {
     const abbrev = ABILITY_MAP[statId];
@@ -272,21 +305,23 @@ export function getSavingThrows(character: DDBCharacter): Skill[] {
     let bonus = getModifier(getStatValue(character, statId));
     const subType = `${fullName}-saving-throws`;
 
-    const proficient = mods.find((m: DDBModifier) => m.type === "proficiency" && (m.subType === subType || m.subType === fullName));
+    // Proficiency
+    const proficient = mods.some((m: DDBModifier) => m.type === "proficiency" && m.subType === subType);
     if (proficient) bonus += profBonus;
 
     // Specific bonuses for this ability's save
-    mods.filter((m: DDBModifier) => m.type === "bonus" && (m.subType === subType || m.subType === fullName))
-      .forEach((m: DDBModifier) => bonus += m.value);
+    mods.filter((m: DDBModifier) => m.type === "bonus" && m.subType === subType)
+      .forEach((m: DDBModifier) => bonus += m.value || 0);
 
     // Global bonuses to all saving throws
     mods.filter((m: DDBModifier) => m.type === "bonus" && (m.subType === "saving-throws" || m.subType === "saving-throws-bonus"))
-      .forEach((m: DDBModifier) => bonus += m.value);
+      .forEach((m: DDBModifier) => bonus += m.value || 0);
 
     return {
       name: abbrev,
       bonus: bonus >= 0 ? `+${bonus}` : `${bonus}`,
-      bonusValue: bonus
+      bonusValue: bonus,
+      isProficient: proficient
     };
   });
 }

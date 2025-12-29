@@ -28,8 +28,13 @@ export const SavingThrowsPanel: React.FC<SavingThrowsPanelProps> = ({ character,
                 <div className="p-3 border-t border-[var(--border-color)] bg-[var(--bg-app)]/30">
                     <div className="grid grid-cols-3 gap-2">
                         {saves.map((save) => (
-                            <div key={save.name} className="flex flex-col items-center bg-[var(--bg-input)]/50 p-2 rounded-lg border border-[var(--border-color)]/30">
-                                <span className="text-[9px] text-[var(--text-secondary)] font-bold uppercase tracking-tighter">{save.name}</span>
+                            <div key={save.name} className="flex flex-col items-center bg-[var(--bg-input)]/50 p-2 rounded-lg border border-[var(--border-color)]/30 relative group/save">
+                                {save.isProficient && (
+                                    <div className="absolute top-1.5 left-1.5 w-1 h-1 rounded-full bg-red-600 shadow-[0_0_3px_rgba(220,38,38,0.6)]" title="Proficient" />
+                                )}
+                                <span className={`text-[9px] font-bold uppercase tracking-tighter ${save.isProficient ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}`}>
+                                    {save.name}
+                                </span>
                                 <div className="group/roll relative flex items-center justify-center min-w-[32px] mt-1">
                                     <span className={`text-xs font-mono font-bold group-hover/roll:scale-0 transition-transform duration-200 
                                         ${save.bonusValue > 0 ? 'text-[var(--text-success)]' : (save.bonusValue < 0 ? 'text-[var(--color-danger)]' : 'text-[var(--text-secondary)]')}`}>
