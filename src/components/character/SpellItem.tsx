@@ -1,18 +1,19 @@
+import React from 'react';
 import { MarkdownDescription } from './MarkdownDescription';
 import type { Spell } from '../../types/character';
-import type { DDBCharacter } from '../../types/dnd-beyond';
 import { Card, Badge } from '../common';
 import { SCHOOL_ICON_MAP, ConcentrationIcon } from '../spell-icons';
+
+import { useAppContext } from '../../context/AppContext';
 
 interface SpellItemProps {
     spell: Spell;
     isOpen: boolean;
     onClick: () => void;
-    onRoll: (notation: string, label?: string) => void;
-    character?: DDBCharacter | null;
 }
 
-export const SpellItem: React.FC<SpellItemProps> = ({ spell, isOpen, onClick, onRoll, character }) => {
+export const SpellItem: React.FC<SpellItemProps> = ({ spell, isOpen, onClick }) => {
+    const { rollDice: onRoll } = useAppContext();
     const IconComp = SCHOOL_ICON_MAP[spell.school] as any;
     const isConcentration = spell.components.toLowerCase().includes('concentration');
 
@@ -98,7 +99,7 @@ export const SpellItem: React.FC<SpellItemProps> = ({ spell, isOpen, onClick, on
 
                     <div className="font-black text-[10px] uppercase tracking-widest mb-1 italic opacity-50 text-[var(--text-primary)] dark:text-white">Combined Description</div>
                     <div className="bg-[var(--bg-card)] p-3 rounded-lg border border-[var(--border-color)]/50 shadow-inner">
-                        <MarkdownDescription content={spell.description} onRoll={onRoll} character={character} name={spell.name} className={spell.className} />
+                        <MarkdownDescription content={spell.description} name={spell.name} className={spell.className} />
                     </div>
 
                     {spell.tags && spell.tags.length > 0 && (

@@ -1,27 +1,18 @@
 import React from 'react';
-import type { FilterState, QuickFilters } from '../../types/character';
 import { ActionIcon, BonusActionIcon, ReactionIcon, ConcentrationIcon } from '../spell-icons';
 import { IconButton } from '../common';
+import { useAppContext } from '../../context/AppContext';
 
-interface FilterControlsProps {
-    filters: FilterState;
-    setFilters: React.Dispatch<React.SetStateAction<FilterState>>;
-    quickFilters: QuickFilters;
-    setQuickFilters: React.Dispatch<React.SetStateAction<QuickFilters>>;
-    allTags: string[];
-    showAdvanced: boolean;
-    setShowAdvanced: React.Dispatch<React.SetStateAction<boolean>>;
-}
-
-export const FilterControls: React.FC<FilterControlsProps> = ({
-    filters,
-    setFilters,
-    quickFilters,
-    setQuickFilters,
-    allTags,
-    showAdvanced,
-    setShowAdvanced
-}) => {
+export const FilterControls: React.FC = () => {
+    const {
+        filters,
+        setFilters,
+        quickFilters,
+        setQuickFilters,
+        allTags,
+        showAdvanced,
+        setShowAdvanced
+    } = useAppContext();
     const toggleLevelFilter = (lvl: number) => {
         setFilters(prev => ({
             ...prev,

@@ -1,16 +1,16 @@
+import React from 'react';
 import { InlineRoll } from './InlineRoll';
 import { resolveDDBTags } from '../../dnd-utils';
-import type { DDBCharacter } from '../../types/dnd-beyond';
+import { useAppContext } from '../../context/AppContext';
 
 interface MarkdownDescriptionProps {
     content: string;
-    onRoll: (notation: string) => void;
-    character?: DDBCharacter | null;
     name?: string;
     className?: string;
 }
 
-export const MarkdownDescription = ({ content, onRoll, character, name, className }: MarkdownDescriptionProps) => {
+export const MarkdownDescription: React.FC<MarkdownDescriptionProps> = ({ content, name, className }) => {
+    const { character } = useAppContext();
     if (!content) return null;
 
     // Resolve DDB placeholder tags first
@@ -26,7 +26,7 @@ export const MarkdownDescription = ({ content, onRoll, character, name, classNam
         <div className="text-[var(--text-secondary)] text-xs leading-relaxed">
             {parts.map((part, index) => {
                 if (part.match(diceRegex)) {
-                    return <InlineRoll key={index} notation={part} onRoll={onRoll} />;
+                    return <InlineRoll key={index} notation={part} />;
                 }
                 // Handle simple HTML tags (like <p>, <br>, <strong>) or just return text
                 // Since this is used for snippets/descriptions which might have basic HTML

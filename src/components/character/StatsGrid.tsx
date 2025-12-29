@@ -1,12 +1,10 @@
 import React from 'react';
-import type { DDBCharacter } from '../../types/dnd-beyond';
 import { ABILITY_MAP, getAbilityScore, getModString } from '../../dnd-utils';
+import { useAppContext } from '../../context/AppContext';
 
-interface StatsGridProps {
-    character: DDBCharacter;
-}
-
-export const StatsGrid: React.FC<StatsGridProps> = ({ character }) => {
+export const StatsGrid: React.FC = () => {
+    const { character } = useAppContext();
+    if (!character) return null;
     return (
         <div className="grid grid-cols-6 gap-1.5 text-center mb-4">
             {[1, 2, 3, 4, 5, 6].map((id) => (

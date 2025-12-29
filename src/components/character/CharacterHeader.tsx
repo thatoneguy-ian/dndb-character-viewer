@@ -1,13 +1,13 @@
 import React from 'react';
-import type { DDBCharacter } from '../../types/dnd-beyond';
 import { calculateHP, calculateAC, getInitiative, getPassiveStats } from '../../dnd-utils';
 import { Badge } from '../common';
 
-interface CharacterHeaderProps {
-    character: DDBCharacter;
-}
+import { useAppContext } from '../../context/AppContext';
 
-export const CharacterHeader: React.FC<CharacterHeaderProps> = ({ character }) => {
+export const CharacterHeader: React.FC = () => {
+    const { character } = useAppContext();
+    if (!character) return null;
+
     const hp = calculateHP(character);
     const ac = calculateAC(character);
     const initiative = getInitiative(character);

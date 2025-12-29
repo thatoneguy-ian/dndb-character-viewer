@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import type { DDBCharacter } from '../../types/dnd-beyond';
 import ConditionIcon from '../conditions';
+import { useAppContext } from '../../context/AppContext';
 
 interface ConditionDef {
     key: string;
@@ -32,7 +32,8 @@ const CONDITION_ID_MAP: Record<number, string> = {
     12: 'Prone', 13: 'Restrained', 14: 'Stunned', 15: 'Unconscious'
 };
 
-export function ConditionsRow({ character }: { character: DDBCharacter | null }) {
+export function ConditionsRow() {
+    const { character } = useAppContext();
     const [open, setOpen] = useState<ConditionDef | null>(null);
 
     const getActiveConditions = () => {

@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
-import type { DDBCharacter } from '../../types/dnd-beyond';
 import { getSavingThrows } from '../../dnd-utils';
 import { IconChevronDown, IconChevronUp } from '../icons';
+import { useAppContext } from '../../context/AppContext';
 
-interface SavingThrowsPanelProps {
-    character: DDBCharacter;
-    onRoll: (notation: string, label?: string) => void;
-}
-
-export const SavingThrowsPanel: React.FC<SavingThrowsPanelProps> = ({ character, onRoll }) => {
+export const SavingThrowsPanel: React.FC = () => {
+    const { character, rollDice } = useAppContext();
     const [isOpen, setIsOpen] = useState(false);
+
+    if (!character) return null;
     const saves = getSavingThrows(character);
 
     return (
@@ -42,9 +40,8 @@ export const SavingThrowsPanel: React.FC<SavingThrowsPanelProps> = ({ character,
                                     </span>
                                     <button
                                         className="absolute inset-0 bg-red-600 rounded opacity-0 group-hover/roll:opacity-100 transition-opacity duration-200 flex items-center justify-center shadow-lg shadow-red-900/40"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            onRoll(`1d20${save.bonus}`, `${save.name} Save`);
+                                        onClick={() => {
+                                            rollDice(`1d20${save.bonus}`, `${save.name} Save`);
                                         }}
                                     >
                                         <span className="text-[7px] font-black text-white uppercase tracking-tighter">Roll</span>
@@ -55,6 +52,6 @@ export const SavingThrowsPanel: React.FC<SavingThrowsPanelProps> = ({ character,
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };

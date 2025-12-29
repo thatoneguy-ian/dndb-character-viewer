@@ -1,17 +1,15 @@
 import React, { useState } from 'react';
-import type { DDBCharacter } from '../../types/dnd-beyond';
 import type { Skill } from '../../types/character';
 import { getSkills } from '../../dnd-utils';
 import { IconChevronDown, IconChevronUp } from '../icons';
+import { useAppContext } from '../../context/AppContext';
 
-interface SkillsPanelProps {
-    character: DDBCharacter;
-    onRoll: (notation: string, label?: string) => void;
-}
-
-export const SkillsPanel: React.FC<SkillsPanelProps> = ({ character, onRoll }) => {
+export const SkillsPanel: React.FC = () => {
+    const { character, rollDice } = useAppContext();
     const [isOpen, setIsOpen] = useState(false);
     const [sortMode, setSortMode] = useState<'name' | 'bonus'>('name');
+
+    if (!character) return null;
 
     const skills = getSkills(character).sort((a, b) =>
         sortMode === 'name' ? a.name.localeCompare(b.name) : b.bonusValue - a.bonusValue
@@ -50,9 +48,8 @@ export const SkillsPanel: React.FC<SkillsPanelProps> = ({ character, onRoll }) =
                                     </span>
                                     <button
                                         className="absolute inset-0 bg-blue-600 rounded opacity-0 group-hover/roll:opacity-100 transition-opacity duration-200 flex items-center justify-center shadow-lg shadow-blue-900/40"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            onRoll(`1d20${skill.bonus}`, `${skill.name} Roll`);
+                                        onClick={() => {
+                                            rollDice(`1d20${skill.bonus}`, `${skill.name} Roll`);
                                         }}
                                     >
                                         <span className="text-[7px] font-black text-white uppercase tracking-tighter">Roll</span>

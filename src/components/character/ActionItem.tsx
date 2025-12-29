@@ -1,17 +1,17 @@
+import React from 'react';
 import { MarkdownDescription } from './MarkdownDescription';
 import type { Action } from '../../types/character';
-import type { DDBCharacter } from '../../types/dnd-beyond';
 import { Card, Badge } from '../common';
+import { useAppContext } from '../../context/AppContext';
 
 interface ActionItemProps {
     action: Action;
     isOpen: boolean;
     onClick: () => void;
-    onRoll: (notation: string, label?: string) => void;
-    character?: DDBCharacter | null;
 }
 
-export const ActionItem: React.FC<ActionItemProps> = ({ action, isOpen, onClick, onRoll, character }) => {
+export const ActionItem: React.FC<ActionItemProps> = ({ action, isOpen, onClick }) => {
+    const { rollDice: onRoll } = useAppContext();
     return (
         <Card
             className={`mb-2 p-3 transition-all ${isOpen ? 'ring-2 ring-[var(--color-action)]/50 bg-[var(--bg-card)] shadow-md' : 'bg-[var(--bg-card)]/40 hover:bg-[var(--bg-card)]/60 shadow-sm'}`}
@@ -76,7 +76,7 @@ export const ActionItem: React.FC<ActionItemProps> = ({ action, isOpen, onClick,
                 <div className="pt-3 border-t border-[var(--border-color)] space-y-2 bg-[var(--bg-app)]/40 p-3 rounded-b-lg">
                     <div className="font-black text-[10px] uppercase tracking-widest mb-1 italic text-[var(--text-primary)]">Description</div>
                     <div className="bg-[var(--bg-card)] p-3 rounded-lg border border-[var(--border-color)]/50 shadow-inner">
-                        <MarkdownDescription content={action.description} onRoll={onRoll} character={character} name={action.name} className={action.className} />
+                        <MarkdownDescription content={action.description} name={action.name} className={action.className} />
                     </div>
                 </div>
             </div>

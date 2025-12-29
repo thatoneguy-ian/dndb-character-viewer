@@ -1,27 +1,18 @@
 import React from 'react';
-import type { PinnedChar } from '../../types/character';
 import { Button, Card } from '../common';
 import { IconSearch, IconTrash } from '../icons';
+import { useAppContext } from '../../context/AppContext';
 
-interface CharacterListViewProps {
-    charId: string;
-    setCharId: (id: string) => void;
-    loading: boolean;
-    error: string;
-    pinned: PinnedChar[];
-    onFetch: (id: string) => void;
-    onRemovePin: (id: string) => void;
-}
-
-export const CharacterListView: React.FC<CharacterListViewProps> = ({
-    charId,
-    setCharId,
-    loading,
-    error,
-    pinned,
-    onFetch,
-    onRemovePin
-}) => {
+export const CharacterListView: React.FC = () => {
+    const {
+        charId,
+        setCharId,
+        loading,
+        error,
+        pinned,
+        handleFetch,
+        removePin
+    } = useAppContext();
     return (
         <div className="p-6 bg-gray-900 h-full w-full flex flex-col justify-center items-center text-white overflow-y-auto">
             <div className="mb-10 text-center">
@@ -38,16 +29,17 @@ export const CharacterListView: React.FC<CharacterListViewProps> = ({
                             type="text"
                             className="w-full p-4 pl-11 rounded-xl bg-gray-800 border border-gray-700 focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none text-white transition-all shadow-lg"
                             placeholder="D&D Beyond ID..."
+                            aria-label="D&D Beyond Character ID"
                             value={charId}
                             onChange={(e) => setCharId(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && onFetch(charId)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleFetch(charId)}
                         />
                         <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
                             <IconSearch />
                         </div>
                     </div>
                     <Button
-                        onClick={() => onFetch(charId)}
+                        onClick={() => handleFetch(charId)}
                         disabled={loading}
                         className="rounded-xl px-6"
                     >
@@ -73,7 +65,7 @@ export const CharacterListView: React.FC<CharacterListViewProps> = ({
                             <Card
                                 key={p.id}
                                 className="group relative p-3 border-gray-800 hover:border-red-500/50"
-                                onClick={() => onFetch(p.id)}
+                                onClick={() => handleFetch(p.id)}
                             >
                                 <div className="flex items-center gap-3">
                                     <div className="relative">
@@ -91,7 +83,7 @@ export const CharacterListView: React.FC<CharacterListViewProps> = ({
                                     </div>
                                 </div>
                                 <button
-                                    onClick={(e) => { e.stopPropagation(); onRemovePin(p.id); }}
+                                    onClick={(e) => { e.stopPropagation(); removePin(p.id); }}
                                     className="absolute top-2 right-2 p-1.5 bg-gray-900/80 rounded-lg text-gray-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all border border-gray-700"
                                 >
                                     <IconTrash />

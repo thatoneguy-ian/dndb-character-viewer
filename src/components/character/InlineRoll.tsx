@@ -1,11 +1,13 @@
+import React from 'react';
 import { DiceIcon } from './DiceIcon';
+import { useAppContext } from '../../context/AppContext';
 
 interface InlineRollProps {
     notation: string;
-    onRoll: (notation: string) => void;
 }
 
-export const InlineRoll = ({ notation, onRoll }: InlineRollProps) => {
+export const InlineRoll: React.FC<InlineRollProps> = ({ notation }) => {
+    const { rollDice: onRoll } = useAppContext();
     // Extract sides from notation (e.g. "1d8+4" -> 8)
     const match = notation.match(/d(\d+)/i);
     const sides = match ? parseInt(match[1], 10) as any : 20;

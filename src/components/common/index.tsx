@@ -48,7 +48,15 @@ export const Card: React.FC<{ children: React.ReactNode; className?: string; onC
 }) => (
     <div
         onClick={onClick}
-        className={`bg-[var(--bg-card)] backdrop-blur-sm border border-[var(--border-color)] rounded-lg overflow-hidden transition-all duration-300 ${onClick ? 'cursor-pointer hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-app)]/50 shadow-md shadow-black/5' : 'shadow-sm shadow-black/5'} ${className}`}
+        onKeyDown={(e) => {
+            if (onClick && (e.key === 'Enter' || e.key === ' ')) {
+                e.preventDefault();
+                onClick();
+            }
+        }}
+        role={onClick ? "button" : undefined}
+        tabIndex={onClick ? 0 : undefined}
+        className={`bg-[var(--bg-card)] backdrop-blur-sm border border-[var(--border-color)] rounded-lg overflow-hidden transition-all duration-300 ${onClick ? 'cursor-pointer hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-app)]/50 shadow-md shadow-black/5 focus:outline-none focus:ring-2 focus:ring-[var(--color-action)]' : 'shadow-sm shadow-black/5'} ${className}`}
     >
         {children}
     </div>
@@ -77,7 +85,15 @@ export const Badge: React.FC<{
         return (
             <div
                 onClick={onClick}
-                className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold border ${colors[color]} ${onClick ? 'cursor-pointer hover:brightness-110' : ''} ${className}`}
+                onKeyDown={(e) => {
+                    if (onClick && (e.key === 'Enter' || e.key === ' ')) {
+                        e.preventDefault();
+                        onClick(e as any);
+                    }
+                }}
+                role={onClick ? "button" : undefined}
+                tabIndex={onClick ? 0 : undefined}
+                className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold border ${colors[color]} ${onClick ? 'cursor-pointer hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-[var(--color-action)]' : ''} ${className}`}
             >
                 {children}
             </div>
@@ -88,6 +104,7 @@ export const Badge: React.FC<{
 export const IconButton: React.FC<ButtonProps & { title?: string }> = ({
     children,
     className = '',
+    title,
     ...props
 }) => (
     <button
@@ -95,6 +112,8 @@ export const IconButton: React.FC<ButtonProps & { title?: string }> = ({
             text-[var(--text-secondary)] 
             hover:text-[var(--text-primary)] 
             hover:bg-[var(--bg-input)] ${className}`}
+        title={title}
+        aria-label={title || props['aria-label']}
         {...props}
     >
         {children}

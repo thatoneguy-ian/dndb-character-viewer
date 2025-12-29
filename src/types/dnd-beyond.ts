@@ -9,6 +9,8 @@ export interface DDBCharacter {
   viewUrl?: string;
   classes: DDBClass[];
   stats: DDBStat[];
+  bonusStats: DDBStat[];
+  overrideStats: DDBStat[];
   modifiers: DDBModifiers;
   baseHitPoints: number;
   bonusHitPoints: number;
@@ -59,6 +61,9 @@ export interface DDBClass {
       levelSpellSlots: number[][];
     };
   };
+  subclassDefinition?: {
+    name: string;
+  };
   classFeatures: DDBClassFeature[];
 }
 
@@ -77,6 +82,8 @@ export interface DDBModifier {
   componentId: number | null;
   componentTypeId: number | null;
   value: number;
+  statId: number | null;
+  fixedValue: number | null;
 }
 
 export interface DDBModifiers {
@@ -85,6 +92,7 @@ export interface DDBModifiers {
   feat: DDBModifier[];
   item: DDBModifier[];
   background: DDBModifier[];
+  condition: DDBModifier[];
 }
 
 export interface DDBItem {

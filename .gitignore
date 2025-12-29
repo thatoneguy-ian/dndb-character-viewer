@@ -25,5 +25,3 @@ src/assets/raw-svg/
 *.njsproj
 *.sln
 *.sw?
-./exampleJSON/*
-exampleJSON

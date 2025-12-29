@@ -1,17 +1,15 @@
+import React from 'react';
 import { MarkdownDescription } from './MarkdownDescription';
 import type { InventoryItem } from '../../types/character';
-import type { DDBCharacter } from '../../types/dnd-beyond';
 import { Card } from '../common';
 
 interface ConsumableItemProps {
     item: InventoryItem;
     isOpen: boolean;
     onClick: () => void;
-    onRoll: (notation: string, label?: string) => void;
-    character?: DDBCharacter | null;
 }
 
-export const ConsumableItem: React.FC<ConsumableItemProps> = ({ item, isOpen, onClick, onRoll, character }) => {
+export const ConsumableItem: React.FC<ConsumableItemProps> = ({ item, isOpen, onClick }) => {
     return (
         <Card
             className={`mb-2 p-3 transition-all ${isOpen ? 'ring-2 ring-[var(--text-success)]/50 bg-[var(--bg-card)] shadow-md' : 'bg-[var(--bg-card)]/40 hover:bg-[var(--bg-card)]/60 shadow-sm'}`}
@@ -37,7 +35,7 @@ export const ConsumableItem: React.FC<ConsumableItemProps> = ({ item, isOpen, on
                 <div className="pt-3 border-t border-[var(--border-color)] text-xs text-[var(--text-primary)] leading-relaxed">
                     <div className="font-black text-[10px] uppercase tracking-widest mb-1 italic opacity-50 text-[var(--text-primary)]">Item Effect</div>
                     <div className="bg-[var(--bg-card)] p-3 rounded-lg border border-[var(--border-color)]/50 shadow-inner mt-2">
-                        <MarkdownDescription content={item.description} onRoll={onRoll} character={character} name={item.name} />
+                        <MarkdownDescription content={item.description} name={item.name} />
                     </div>
                 </div>
             </div>

@@ -1,11 +1,11 @@
 import React from 'react';
-import type { SpellSlot } from '../../types/character';
+import { getSpellSlots } from '../../dnd-utils';
+import { useAppContext } from '../../context/AppContext';
 
-interface SpellSlotBarProps {
-    spellSlots: SpellSlot[];
-}
-
-export const SpellSlotBar: React.FC<SpellSlotBarProps> = ({ spellSlots }) => {
+export const SpellSlotBar: React.FC = () => {
+    const { character } = useAppContext();
+    if (!character) return null;
+    const spellSlots = getSpellSlots(character);
     const visible = spellSlots.filter(s => !(s.max === 0 && (s.used ?? 0) === 0));
 
     if (visible.length === 0) {
