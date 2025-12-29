@@ -16,11 +16,11 @@ export const InlineRoll = ({ notation, onRoll }: InlineRollProps) => {
                 e.stopPropagation();
                 onRoll(notation);
             }}
-            className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-[var(--color-action)]/10 hover:bg-[var(--color-action)]/20 border border-[var(--color-action)]/20 rounded text-[var(--color-action)] font-black text-[12px] transition-all active:scale-95 cursor-pointer mx-0.5"
+            className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-black/20 hover:bg-black/40 border-2 border-[var(--color-action)] rounded text-[var(--text-primary)] font-black text-[11px] transition-all active:scale-95 cursor-pointer mx-0.5 shadow-lg shadow-red-900/20"
             title={`Roll ${notation}`}
         >
-            <DiceIcon sides={sides} className="w-5 h-5 transition-transform group-hover:rotate-12" />
-            <span>{notation}</span>
+            <DiceIcon sides={sides} className="w-4 h-4 transition-transform group-hover:rotate-12" />
+            <span className="tracking-tighter">{notation}</span>
         </button>
     );
 };

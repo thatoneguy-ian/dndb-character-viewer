@@ -69,6 +69,7 @@ export function resolveDDBTags(text: string, character: DDBCharacter, contextNam
   const profBonus = getProficiencyBonus(character);
 
   return text.replace(/{{(.*?)}}/g, (match, expression) => {
+    const isSigned = expression.includes('#signed');
     // Remove formatting flags like #unsigned, #signed, calc, etc.
     let cleanExpr = expression.split('#')[0].trim().toLowerCase();
 
@@ -91,15 +92,29 @@ export function resolveDDBTags(text: string, character: DDBCharacter, contextNam
       return totalLevel.toString();
     });
 
-    // Replace ability mods: e.g. {{abilitymod:str}}
-    cleanExpr = cleanExpr.replace(/\babilitymod:(\w+)\b/g, (_m: string, ab: string) => {
+    // Replace ability mods: e.g. {{abilitymod:str}} or {{modifier:str}}
+    const modMatch = cleanExpr.match(/\b(?:abilitymod|modifier):(\w+)\b/);
+    if (modMatch) {
+      const ab = modMatch[1];
       const statId = Object.keys(ABILITY_MAP).find(k => ABILITY_MAP[Number(k)].toLowerCase() === ab.toLowerCase());
       if (statId) {
         const score = getStatValue(character, Number(statId));
-        return getModifier(score).toString();
+        const val = getModifier(score);
+        return isSigned && val >= 0 ? `+${val}` : val.toString();
       }
-      return "0";
-    });
+    }
+
+    // Replace savedc: e.g. {{savedc:wis}}
+    const dcMatch = cleanExpr.match(/\bsavedc:(\w+)\b/);
+    if (dcMatch) {
+      const ab = dcMatch[1];
+      const statId = Object.keys(ABILITY_MAP).find(k => ABILITY_MAP[Number(k)].toLowerCase() === ab.toLowerCase());
+      if (statId) {
+        const score = getStatValue(character, Number(statId));
+        const val = 8 + profBonus + getModifier(score);
+        return val.toString();
+      }
+    }
 
     // Special logic for scalevalue
     if (cleanExpr === 'scalevalue') {
@@ -126,14 +141,18 @@ export function resolveDDBTags(text: string, character: DDBCharacter, contextNam
     // Evaluate simple math: e.g. "14+4"
     try {
       // If the expression is just a number now, return it
-      if (!isNaN(Number(cleanExpr))) return cleanExpr;
+      if (!isNaN(Number(cleanExpr))) {
+        const num = Number(cleanExpr);
+        return isSigned && num >= 0 ? `+${num}` : num.toString();
+      }
 
       // Only allow basic math characters
       if (/^[0-9+\-*/().\s]+$/.test(cleanExpr)) {
         // Safe evaluation of simple math
         // eslint-disable-next-line no-new-func
         const result = new Function(`return ${cleanExpr}`)();
-        return result.toString();
+        const numResult = Number(result);
+        return isSigned && numResult >= 0 ? `+${numResult}` : numResult.toString();
       }
     } catch (e) {
       return match;
@@ -220,18 +239,44 @@ export function getSkills(character: DDBCharacter): Skill[] {
 export function getSavingThrows(character: DDBCharacter): Skill[] {
   const totalLevel = character.classes.reduce((acc: number, c: any) => acc + c.level, 0);
   const profBonus = Math.ceil(1 + (totalLevel / 4));
-  const mods = getAllModifiers(character);
+  const rawMods = getAllModifiers(character);
+
+  const FULL_NAMES: Record<string, string> = {
+    "STR": "strength", "DEX": "dexterity", "CON": "constitution",
+    "INT": "intelligence", "WIS": "wisdom", "CHA": "charisma"
+  };
+
+  // Identify core proficiency feature IDs for all classes
+  const coreProfFeatureIds = character.classes.map(c =>
+    c.classFeatures?.find(f => f.definition.name === "Proficiencies")?.definition.id
+  ).filter(Boolean);
+
+  const multiclassProfIds = coreProfFeatureIds.slice(1);
+
+  // Filter modifiers for saving throws
+  const mods = rawMods.filter(m => {
+    // If it's not a saving throw proficiency, keep it
+    if (m.type !== "proficiency" || !m.subType.endsWith("-saving-throws")) return true;
+
+    // If it's a proficiency from a MULTICLASS core "Proficiencies" feature, skip it
+    if (m.componentId !== null && multiclassProfIds.includes(m.componentId)) {
+      return false;
+    }
+
+    return true;
+  });
 
   return [1, 2, 3, 4, 5, 6].map((statId) => {
-    const name = ABILITY_MAP[statId];
+    const abbrev = ABILITY_MAP[statId];
+    const fullName = FULL_NAMES[abbrev];
     let bonus = getModifier(getStatValue(character, statId));
-    const subType = `${name.toLowerCase()}-saving-throws`;
+    const subType = `${fullName}-saving-throws`;
 
-    const proficient = mods.find((m: DDBModifier) => m.type === "proficiency" && m.subType === subType);
+    const proficient = mods.find((m: DDBModifier) => m.type === "proficiency" && (m.subType === subType || m.subType === fullName));
     if (proficient) bonus += profBonus;
 
     // Specific bonuses for this ability's save
-    mods.filter((m: DDBModifier) => m.type === "bonus" && m.subType === subType)
+    mods.filter((m: DDBModifier) => m.type === "bonus" && (m.subType === subType || m.subType === fullName))
       .forEach((m: DDBModifier) => bonus += m.value);
 
     // Global bonuses to all saving throws
@@ -239,7 +284,7 @@ export function getSavingThrows(character: DDBCharacter): Skill[] {
       .forEach((m: DDBModifier) => bonus += m.value);
 
     return {
-      name,
+      name: abbrev,
       bonus: bonus >= 0 ? `+${bonus}` : `${bonus}`,
       bonusValue: bonus
     };

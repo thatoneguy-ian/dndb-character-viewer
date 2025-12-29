@@ -40,14 +40,24 @@ export interface DDBCharacter {
   statusEffects: any[];
 }
 
+export interface DDBClassFeature {
+  definition: {
+    id: number;
+    name: string;
+  };
+}
+
 export interface DDBClass {
+  id: number;
   level: number;
   definition: {
+    id: number;
     name: string;
     spellRules?: {
       levelSpellSlots: number[][];
     };
   };
+  classFeatures: DDBClassFeature[];
 }
 
 export interface DDBStat {
@@ -60,6 +70,8 @@ export interface DDBModifier {
   type: string;
   subType: string;
   entityId: number | null;
+  componentId: number | null;
+  componentTypeId: number | null;
   value: number;
 }
 
