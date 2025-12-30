@@ -46,20 +46,6 @@ export function getSavingThrows(character: DDBCharacter): Skill[] {
         "INT": "intelligence", "WIS": "wisdom", "CHA": "charisma"
     };
 
-    // Identify starting class and its proficiency feature
-    const startingClass = character.classes.find(c =>
-        c.isStartingClass || c.definition.id === character.startingClassId
-    ) || character.classes[0];
-
-    const startingProfFeatureIds = new Set(
-        startingClass?.classFeatures
-            ?.filter(f => {
-                const name = f.definition.name.toLowerCase();
-                return name === "proficiencies" || name === "starting proficiencies";
-            })
-            .map(f => f.definition.id) || []
-    );
-
     return [1, 2, 3, 4, 5, 6].map((statId) => {
         const abbrev = ABILITY_MAP[statId];
         const fullName = FULL_NAMES[abbrev];
@@ -68,50 +54,56 @@ export function getSavingThrows(character: DDBCharacter): Skill[] {
         const subType = `${fullName}-saving-throws`;
 
         // Check proficiency
-        // Rules: 
-        // 1. Keep if it's NOT a class feature (race, feat, item)
-        // 2. If it IS a class feature:
-        //    a. Keep if it belongs to the starting class's "Proficiencies" feature
-        //    b. Keep if it belongs to ANY class but NOT to a "Proficiencies" feature (e.g. Diamond Soul, Slippery Mind)
         const isProficient = mods.some(m => {
             if (m.type !== "proficiency" || m.subType !== subType) return false;
 
-            if (m.componentTypeId === 12168134) { // Class Feature
-                const isStartingProf = startingProfFeatureIds.has(m.componentId || -1);
+            if (m.sourceCategory === 'class') {
+                // Find the feature to check its required level and class ownership
+                const feature = character.classes
+                    .flatMap(c => c.classFeatures.map(f => ({ ...f, parentClass: c })))
+                    .find(f => f.definition.id === m.componentId);
 
-                // If it's a "Proficiencies" feature, it must be the starting class
-                const isGenericStartProf = character.classes.some(c =>
-                    c.classFeatures.some(f =>
-                        f.definition.id === m.componentId &&
-                        (f.definition.name.toLowerCase() === "proficiencies" || f.definition.name.toLowerCase() === "starting proficiencies")
-                    )
-                );
+                if (!feature) return true; // Fallback for unknown features
 
-                if (isGenericStartProf) {
-                    return isStartingProf;
+                // Generic level 1 proficiency blocks only count if they are from the starting class.
+                // These include the standard "Proficiencies" block or "Core Monk Traits", etc.
+                const isGenericLevel1Prof = feature.definition.requiredLevel === 1 &&
+                    (feature.definition.name.toLowerCase().includes("proficien") ||
+                        feature.definition.name.toLowerCase().includes("traits"));
+
+                if (isGenericLevel1Prof) {
+                    return feature.parentClass.isStartingClass ||
+                        feature.parentClass.definition.id === character.startingClassId;
                 }
-                // Otherwise it's a specific class feature like Diamond Soul, keep it
+
+                // Specific class features give proficiency regardless of starting class (e.g. Diamond Soul, Slippery Mind)
                 return true;
             }
-            // Race, Feat, Item - keep it
+            // Non-class sources (Race, Feat, Item) always count if granted
             return true;
         });
 
         if (isProficient) bonus += profBonus;
 
-        // Apply specific bonuses for this stat
-        mods.filter(m => m.type === "bonus" && m.subType === subType)
-            .forEach(m => {
-                if (m.value !== null && m.value !== undefined) bonus += m.value;
-                if (m.statId) bonus += getModifier(getStatValue(character, m.statId));
-            });
+        // Sum up all valid bonuses
+        // 1. Global saving throw bonuses (e.g. Ring of Protection, Cloak of Protection)
+        // 2. Specific saving throw bonuses (e.g. [Stat]-saving-throws)
+        const bonusMods = mods.filter(m => {
+            if (m.type !== "bonus") return false;
+            const s = m.subType;
+            return s === "saving-throws" ||
+                s === "saving-throws-bonus" ||
+                s === "saving-throw-bonus" ||
+                s === subType;
+        });
 
-        // Apply global bonuses
-        mods.filter(m => m.type === "bonus" && (m.subType === "saving-throws" || m.subType === "saving-throws-bonus"))
-            .forEach(m => {
-                if (m.value !== null && m.value !== undefined) bonus += m.value;
-                if (m.statId) bonus += getModifier(getStatValue(character, m.statId));
-            });
+        bonusMods.forEach(m => {
+            bonus += (m.value ?? m.fixedValue ?? 0);
+            if (m.statId) {
+                // If the bonus depends on another stat (e.g. Paladin's Aura adds CHA mod)
+                bonus += getModifier(getStatValue(character, m.statId));
+            }
+        });
 
         return {
             name: abbrev,
@@ -127,7 +119,7 @@ export function getInitiative(character: DDBCharacter): string {
     const mods = getAllModifiers(character);
 
     mods.filter((m: DDBModifier) => m.type === "bonus" && m.subType === "initiative")
-        .forEach((m: DDBModifier) => bonus += m.value);
+        .forEach((m: DDBModifier) => bonus += (m.value ?? m.fixedValue ?? 0));
 
     return bonus >= 0 ? `+${bonus}` : `${bonus}`;
 }
@@ -195,10 +187,10 @@ export function calculateAC(character: DDBCharacter): number {
         }
     }
 
-    const allMods = getAllModifiers(character);
+    const allMods = getAllModifiers(character).filter(m => m.isGranted);
     allMods.forEach((mod: DDBModifier) => {
         if (mod.type === "bonus" && mod.subType === "armor-class") {
-            ac += mod.value;
+            ac += (mod.value ?? mod.fixedValue ?? 0);
         }
     });
 

@@ -47,6 +47,7 @@ export interface DDBClassFeature {
   definition: {
     id: number;
     name: string;
+    requiredLevel?: number;
   };
 }
 

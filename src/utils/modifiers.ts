@@ -20,29 +20,44 @@ export function getStatValue(character: DDBCharacter, statId: number): number {
 
     const mods = getAllModifiers(character);
 
-    // Filter for bonuses to the score
-    const scoreAdd = mods
-        .filter(m => m.type === "bonus" && (m.subType === `${fullName}-score` || m.subType === fullName))
-        .reduce((sum, m) => sum + (m.value || 0), 0);
+    const isStatMod = (m: DDBModifier) => m.subType === `${fullName}-score` || m.subType === fullName;
 
-    // Check for "set" modifiers (like Gauntlets of Ogre Power)
+    const scoreAdd = mods
+        .filter(m => {
+            if (!isStatMod(m) || m.type !== "bonus") return false;
+            // Character-defining sources (race, class, feat, background) are included even if isGranted is false
+            // to support Tasha's Origins and certain ASIs.
+            // Items and Conditions MUST be granted.
+            if (m.sourceCategory === 'item' || m.sourceCategory === 'condition') {
+                return m.isGranted;
+            }
+            return true;
+        })
+        .reduce((sum, m) => sum + (m.value ?? m.fixedValue ?? 0), 0);
+
     const setMod = mods
-        .filter(m => m.type === "set" && (m.subType === `${fullName}-score` || m.subType === fullName))
-        .reduce((max, m) => Math.max(max, m.value || 0), 0);
+        .filter(m => {
+            if (!isStatMod(m) || m.type !== "set") return false;
+            if (m.sourceCategory === 'item' || m.sourceCategory === 'condition') {
+                return m.isGranted;
+            }
+            return true;
+        })
+        .reduce((max, m) => Math.max(max, m.value ?? m.fixedValue ?? 0), 0);
 
     const total = base + bonus + scoreAdd;
     return setMod > total ? setMod : total;
 }
 
-export function getAllModifiers(character: DDBCharacter): DDBModifier[] {
-    const mods: DDBModifier[] = [];
-    if (character.modifiers.race) mods.push(...character.modifiers.race);
-    if (character.modifiers.class) mods.push(...character.modifiers.class);
-    if (character.modifiers.background) mods.push(...character.modifiers.background);
-    if (character.modifiers.item) mods.push(...character.modifiers.item);
-    if (character.modifiers.feat) mods.push(...character.modifiers.feat);
-    if (character.modifiers.condition) mods.push(...character.modifiers.condition);
-    return mods;
+export function getAllModifiers(character: DDBCharacter): (DDBModifier & { sourceCategory: string })[] {
+    const all: (DDBModifier & { sourceCategory: string })[] = [];
+    const categories = ['race', 'class', 'background', 'item', 'feat', 'condition'] as const;
+    for (const cat of categories) {
+        if (character.modifiers[cat]) {
+            all.push(...character.modifiers[cat].map(m => ({ ...m, sourceCategory: cat })));
+        }
+    }
+    return all;
 }
 
 export function getAbilityScore(character: DDBCharacter, statId: number): number {
