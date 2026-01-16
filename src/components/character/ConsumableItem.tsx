@@ -33,7 +33,7 @@ export const ConsumableItem: React.FC<ConsumableItemProps> = ({ item, isOpen, on
 
             <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isOpen ? 'max-h-[500px] mt-4 opacity-100' : 'max-h-0 opacity-0'}`}>
                 <div className="pt-3 border-t border-[var(--border-color)] text-xs text-[var(--text-primary)] leading-relaxed">
-                    <div className="font-black text-[10px] uppercase tracking-widest mb-1 italic opacity-50 text-[var(--text-primary)]">Item Effect</div>
+                    <div className="font-black text-[10px] uppercase tracking-widest mb-1 italic text-[var(--text-muted)]">Item Effect</div>
                     <div className="bg-[var(--bg-card)] p-3 rounded-lg border border-[var(--border-color)]/50 shadow-inner mt-2">
                         <MarkdownDescription content={item.description} name={item.name} />
                     </div>

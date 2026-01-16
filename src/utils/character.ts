@@ -1,6 +1,6 @@
 import type { DDBCharacter, DDBAction, DDBItem, DDBSpell, DDBModifier } from '../types/dnd-beyond';
 import type { Action, Spell, InventoryItem } from '../types/character';
-import { getModifier, getStatValue } from './modifiers';
+import { getModifier, getStatValue, getProficiencyBonus } from './modifiers';
 import { parseSummonStats } from './parsing';
 
 export function getClasses(character: DDBCharacter): string[] {
@@ -14,12 +14,12 @@ export function getClasses(character: DDBCharacter): string[] {
 
 export function getActions(character: DDBCharacter): Action[] {
     const allActions: Action[] = [];
-    const totalLevel = character.classes.reduce((acc: number, c: any) => acc + c.level, 0);
+    const totalLevel = character.classes.reduce((acc: number, c) => acc + (c.level || 0), 0);
     const profBonus = Math.ceil(1 + (totalLevel / 4));
 
     const strMod = getModifier(getStatValue(character, 1));
     const dexMod = getModifier(getStatValue(character, 2));
-    const isMonk = character.classes.some((c: any) => c.definition.name === "Monk");
+    const isMonk = character.classes.some((c) => c.definition?.name === "Monk");
 
     const processList = (list: DDBAction[], sourceName: string, className?: string): void => {
         if (!list) return;
@@ -96,7 +96,7 @@ export function getActions(character: DDBCharacter): Action[] {
 
             if (isWeapon || isStaff || isWondrousAttack) {
                 let modToUse = strMod;
-                const props = def.properties ? def.properties.map((p: any) => p.name) : [];
+                const props = def.properties ? def.properties.map((p) => p.name) : [];
                 const isFinesse = props.includes("Finesse");
                 const isRanged = def.attackType === 2 || (typeof def.range === 'number' ? def.range > 5 : (def.range?.rangeValue ?? 0) > 5);
                 const isMonkWeapon = isMonk && (def.isMonkWeapon || isStaff || def.categoryId === 1);
@@ -170,20 +170,37 @@ const PREPARED_CASTERS = ["Cleric", "Druid", "Wizard", "Paladin", "Artificer"];
 export function getSpells(character: DDBCharacter): Spell[] {
     const spells: Spell[] = [];
 
+    const profBonus = getProficiencyBonus(character);
+    const diceRegex = /(\b\d*d\d+(?:\s*[+-]\s*\d+)?\b)/gi;
+
+    const CLASS_ABILITY_MAP: Record<string, number> = {
+        "Wizard": 4, "Artificer": 4,
+        "Cleric": 5, "Druid": 5, "Ranger": 5,
+        "Paladin": 6, "Bard": 6, "Sorcerer": 6, "Warlock": 6
+    };
+
     const processSpells = (list: DDBSpell[], source: string, className?: string): void => {
         if (!list) return;
         const safeSource = source || "Unknown";
         const isPreparedClass = PREPARED_CASTERS.some(c => safeSource.includes(c));
+        const abilityId = className ? CLASS_ABILITY_MAP[className] : undefined;
+        const abilityMod = abilityId ? getModifier(getStatValue(character, abilityId)) : 0;
 
         list.forEach((entry) => {
             if (isPreparedClass && entry.prepared === false && !entry.alwaysPrepared) return;
             const def = entry.definition;
             if (!def) return;
 
-            const hit = "";
+            let hit = "";
             let dmg = "";
             const tags = def.tags || [];
             if (tags.includes("Damage")) dmg = "Dmg";
+
+            // Try to parse damage dice from description if not found
+            if (!dmg || dmg === "Dmg") {
+                const match = (def.description || "").match(diceRegex);
+                if (match) dmg = match[0];
+            }
 
             const range = def.range?.rangeValue ? `${def.range.rangeValue}ft` : (def.range?.origin || "Self");
 
@@ -191,6 +208,17 @@ export function getSpells(character: DDBCharacter): Spell[] {
             if (def.attackType === 1) attackType = "Melee Spell";
             if (def.attackType === 2) attackType = "Ranged Spell";
             if (def.saveDcAbilityId) attackType = "Save";
+
+            // Calculate Hit/DC
+            if (def.saveDcAbilityId || def.attackType) {
+                if (def.saveDcAbilityId) {
+                    const saveMod = getModifier(getStatValue(character, def.saveDcAbilityId));
+                    hit = (8 + profBonus + saveMod).toString();
+                } else if (abilityId) {
+                    const bonus = profBonus + abilityMod;
+                    hit = bonus >= 0 ? `+${bonus}` : bonus.toString();
+                }
+            }
 
             let castingType: 'Action' | 'Bonus' | 'Reaction' | 'Other' = 'Other';
             const actType = def.activation?.activationType;
@@ -225,7 +253,7 @@ export function getSpells(character: DDBCharacter): Spell[] {
     };
 
     if (character.classSpells) {
-        character.classSpells.forEach((cls: any) => {
+        character.classSpells.forEach((cls) => {
             const className = cls.name || cls.definition?.name || "Class";
             processSpells(cls.spells, className, className);
         });

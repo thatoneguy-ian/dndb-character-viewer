@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { PinnedChar } from '../types/character';
 import type { DDBCharacter } from '../types/dnd-beyond';
 import { getClasses } from '../dnd-utils';
@@ -9,7 +9,7 @@ export function usePinnedCharacters() {
     useEffect(() => {
         if (typeof chrome !== 'undefined' && chrome.storage) {
             chrome.storage.local.get(['pinned'], (result) => {
-                const loadedPins = result.pinned && Array.isArray(result.pinned) ? result.pinned.map((p: any) => ({
+                const loadedPins: PinnedChar[] = result.pinned && Array.isArray(result.pinned) ? result.pinned.map((p: any) => ({
                     ...p,
                     classes: Array.isArray(p.classes) ? p.classes : ["Lvl " + (p.level || "?")]
                 })) : [];
@@ -18,14 +18,8 @@ export function usePinnedCharacters() {
         }
     }, []);
 
-    const savePins = (newPins: PinnedChar[]) => {
-        setPinned(newPins);
-        if (typeof chrome !== 'undefined' && chrome.storage) {
-            chrome.storage.local.set({ pinned: newPins });
-        }
-    };
 
-    const togglePin = (character: DDBCharacter | null, charId: string) => {
+    const togglePin = useCallback((character: DDBCharacter | null, charId: string) => {
         if (!character) return;
 
         const newPin: PinnedChar = {
@@ -35,27 +29,37 @@ export function usePinnedCharacters() {
             classes: getClasses(character)
         };
 
-        let newPinnedList = [...pinned];
-        const existingIndex = newPinnedList.findIndex(p => p.id === newPin.id);
+        setPinned(prev => {
+            const newPinnedList = [...prev];
+            const existingIndex = newPinnedList.findIndex(p => p.id === newPin.id);
 
-        if (existingIndex !== -1) {
-            newPinnedList.splice(existingIndex, 1);
-        } else {
-            if (newPinnedList.length >= 7) {
-                alert("Max 7 Pins allowed.");
-                return;
+            if (existingIndex !== -1) {
+                newPinnedList.splice(existingIndex, 1);
+            } else {
+                if (newPinnedList.length >= 7) {
+                    alert("Max 7 Pins allowed.");
+                    return prev;
+                }
+                newPinnedList.push(newPin);
             }
-            newPinnedList.push(newPin);
-        }
-        savePins(newPinnedList);
-    };
+            if (typeof chrome !== 'undefined' && chrome.storage) {
+                chrome.storage.local.set({ pinned: newPinnedList });
+            }
+            return newPinnedList;
+        });
+    }, []);
 
-    const removePin = (idToRemove: string) => {
-        const newList = pinned.filter(p => p.id !== idToRemove);
-        savePins(newList);
-    };
+    const removePin = useCallback((idToRemove: string) => {
+        setPinned(prev => {
+            const newList = prev.filter(p => p.id !== idToRemove);
+            if (typeof chrome !== 'undefined' && chrome.storage) {
+                chrome.storage.local.set({ pinned: newList });
+            }
+            return newList;
+        });
+    }, []);
 
-    const updatePinnedData = (charData: DDBCharacter, id: string) => {
+    const updatePinnedData = useCallback((charData: DDBCharacter, id: string) => {
         setPinned(prev => {
             const exists = prev.find(p => p.id === id);
             if (!exists) return prev;
@@ -73,7 +77,7 @@ export function usePinnedCharacters() {
             }
             return newPins;
         });
-    };
+    }, []);
 
     return { pinned, togglePin, removePin, updatePinnedData };
 }

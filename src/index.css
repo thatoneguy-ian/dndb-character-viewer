@@ -11,17 +11,18 @@
   /* Lighter Slate for stats/inputs */
 
   --text-primary: #FFFFFF;
-  /* White text */
-  --text-secondary: #9BA3B5;
-  /* Light Grey text */
+  --text-secondary: #A0AEC0;
+  /* Lighter slate for better contrast */
+  --text-muted: #718096;
+  /* Accessible muted text for dark mode */
   --text-success: #50FA7B;
-  /* Neon Green (Good for Dark Mode) */
+  --text-accent: #63B3ED;
+  /* Accessible Blue */
 
-  --color-action: #FF3B30;
-  /* Bright Red */
-  --color-danger: #FF3B30;
+  --color-action: #F56565;
+  /* Brighter Red for dark mode */
+  --color-danger: #F56565;
   --border-color: #3F4458;
-  /* Matching input bg for subtle borders */
 }
 
 /* LIGHT THEME OVERRIDE (The "Clean Slate" Scheme) */
@@ -33,18 +34,23 @@
   --bg-input: #EBECF0;
   /* Light Grey for stats/inputs */
 
-  --text-primary: #172B4D;
-  /* Deep Navy text (High Contrast) */
-  --text-secondary: #42526E;
-  /* Darker Slate for improved legibility */
+  --text-primary: #1A202C;
+  /* Darker for higher contrast */
+  --text-secondary: #4A5568;
+  /* Standard secondary */
+  --text-muted: #626F86;
+  /* WCAG AA compliant on White */
   --text-success: #00875A;
-  /* Jewel Green (Readable on White) */
+  --text-accent: #2F80ED;
 
-  --color-action: #661717;
-  /* Legible Matte Red */
-  --color-danger: #661717;
-  --border-color: #DFE1E6;
-  /* Light grey border for definition */
+  --color-action: #C53030;
+  /* Stronger Red for light mode */
+  --color-danger: #C53030;
+  --border-color: #E2E8F0;
+
+  /* Vibrant Accents for Light Mode */
+  --accent-gradient: linear-gradient(135deg, #2563eb, #1e40af);
+  --accent-card-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.1);
 }
 
 /* Map Tailwind .dark utility to our variables or force sync */
@@ -53,11 +59,33 @@
   --bg-card: #2C3040;
   --bg-input: #3F4458;
   --text-primary: #FFFFFF;
-  --text-secondary: #9BA3B5;
+  --text-secondary: #A0AEC0;
+  --text-muted: #718096;
   --text-success: #50FA7B;
-  --color-action: #FF3B30;
-  --color-danger: #FF3B30;
+  --text-accent: #63B3ED;
+  --color-action: #3b82f6;
+  --color-danger: #ef4444;
   --border-color: #3F4458;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+
+  /* Semantic State Colors */
+  --color-hp-full: #10b981;
+  --color-hp-mid: #f59e0b;
+  --color-hp-low: #ef4444;
+  --color-initiative: #f59e0b;
+  --color-resource: #3b82f6;
+  --color-ritual: #a855f7;
+
+  /* Typography Scales */
+  --text-size-xs: 10px;
+  --text-size-sm: 12px;
+  --text-size-base: 14px;
+  --text-size-lg: 16px;
+  --text-size-xl: 18px;
+
+  --glow-action: 0 0 15px rgba(59, 130, 246, 0.3);
+  --glow-success: 0 0 15px rgba(16, 185, 129, 0.3);
 }
 
 html,
@@ -93,7 +121,10 @@ body {
 ::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.1);
   border-radius: 10px;
-  transition: background 0.3s ease;
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 ::-webkit-scrollbar-thumb:hover {

@@ -1,7 +1,7 @@
 import React from 'react';
 import { MarkdownDescription } from './MarkdownDescription';
 import type { Action } from '../../types/character';
-import { Card, Badge } from '../common';
+import { Card } from '../common';
 import { useAppContext } from '../../context/AppContext';
 
 interface ActionItemProps {
@@ -11,64 +11,73 @@ interface ActionItemProps {
 }
 
 export const ActionItem: React.FC<ActionItemProps> = ({ action, isOpen, onClick }) => {
-    const { rollDice: onRoll } = useAppContext();
+    const { rollDice: onRoll, toggleUsed, usedIds } = useAppContext();
+    const actionId = `action-${action.id}`;
+    const isUsed = usedIds.has(actionId);
     return (
         <Card
-            className={`mb-2 p-3 transition-all ${isOpen ? 'ring-2 ring-[var(--color-action)]/50 bg-[var(--bg-card)] shadow-md' : 'bg-[var(--bg-card)]/40 hover:bg-[var(--bg-card)]/60 shadow-sm'}`}
+            className={`mb-2 p-3 transition-all ${isOpen ? 'ring-2 ring-[var(--color-action)]/50 bg-[var(--bg-card)] shadow-md' : 'bg-[var(--bg-card)]/40 hover:bg-[var(--bg-card)]/60 shadow-sm'} ${isUsed ? 'opacity-40 grayscale-[0.5]' : ''}`}
             onClick={onClick}
         >
             <div className="flex justify-between items-start gap-4">
                 <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-black uppercase tracking-tight truncate text-[var(--text-primary)]">
-                        {action.name}
+                    <h4 className="text-sm font-black text-[var(--text-primary)] uppercase tracking-tight truncate">
+                        {action.name} {isUsed && (
+                            <span
+                                className="text-[9px] text-green-500 font-black ml-1 uppercase cursor-pointer hover:underline"
+                                onClick={(e) => { e.stopPropagation(); toggleUsed(actionId); }}
+                            >
+                                Spent
+                            </span>
+                        )}
                     </h4>
-                    <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-widest truncate max-w-[120px]">
-                            {action.attackType || action.source}
+                    <div className="flex items-center gap-1 mt-1">
+                        <span className={`text-[10px] font-black uppercase tracking-widest ${action.type === 'Action' ? 'text-[var(--color-danger)]' : action.type === 'Bonus' ? 'text-[var(--color-success)]' : action.type === 'Reaction' ? 'text-[var(--color-warning)]' : 'text-[var(--text-secondary)]'}`}>
+                            {action.type === 'Action' && <span className="mr-1">🔴</span>}
+                            {action.type === 'Bonus' && <span className="mr-1">🟢</span>}
+                            {action.type === 'Reaction' && <span className="mr-1">🟡</span>}
+                            {action.type}
                         </span>
-                        {action.range && <Badge className="py-0">{action.range}</Badge>}
+                        <span className="text-[var(--text-muted)] opacity-30">•</span>
+                        <span className="text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-widest truncate max-w-[120px]">
+                            {action.source}
+                        </span>
                     </div>
+                    {!isOpen && action.description && (
+                        <p className="text-[10px] text-[var(--text-muted)] mt-1 line-clamp-1 italic">
+                            {action.description.replace(/<[^>]*>/g, '').replace(/[#*`]/g, '').slice(0, 100)}...
+                        </p>
+                    )}
                 </div>
 
-                <div className="text-right flex flex-col items-end gap-1 h-[44px] justify-between">
-                    <div className="flex-1 flex items-center justify-end">
-                        {action.hitOrDc && (
-                            <button
-                                className="group/roll relative flex items-center justify-center min-w-[32px] px-1 py-0.5"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    const bonus = action.hitOrDc?.replace(/[^0-9+-]/g, '');
-                                    if (bonus) onRoll(`1d20${bonus.startsWith('+') || bonus.startsWith('-') ? bonus : `+${bonus}`}`, `${action.name} Attack`);
-                                }}
-                            >
-                                <span className="text-xs font-black font-mono tracking-tighter group-hover/roll:scale-0 transition-transform duration-200 text-[var(--color-action)]">
-                                    {action.hitOrDc}
-                                </span>
-                                <div className="absolute inset-0 bg-[var(--color-action)] rounded opacity-0 group-hover/roll:opacity-100 transition-opacity duration-200 flex items-center justify-center shadow-lg">
-                                    <span className="text-[8px] font-black text-white uppercase tracking-tighter">Roll</span>
-                                </div>
-                            </button>
-                        )}
-                    </div>
-                    <div className="flex-1 flex items-center justify-end">
-                        {action.damage && (
-                            <button
-                                className="group/roll relative flex items-center justify-end min-w-[60px] px-1 py-0.5"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    const notation = action.damage?.split(' ')[0];
-                                    if (notation) onRoll(notation, `${action.name} Damage`);
-                                }}
-                            >
-                                <div className="text-[10px] font-bold group-hover/roll:scale-0 transition-transform duration-200 text-right text-[var(--text-primary)]">
-                                    {action.damage.split(' ')[0]} <span className="text-[var(--text-secondary)] ml-0.5">{action.damage.split(' ').slice(1).join(' ')}</span>
-                                </div>
-                                <div className="absolute inset-0 bg-[var(--color-action)] rounded opacity-0 group-hover/roll:opacity-100 transition-opacity duration-200 flex items-center justify-center shadow-lg">
-                                    <span className="text-[8px] font-black text-white uppercase tracking-tighter">Roll Damage</span>
-                                </div>
-                            </button>
-                        )}
-                    </div>
+                <div className="flex gap-1 self-center">
+                    {action.hitOrDc && (
+                        <div
+                            className="bg-blue-900/10 border border-blue-500/30 text-blue-400 rounded-md px-2 h-9 min-w-[3.5rem] flex flex-col items-center justify-center leading-none cursor-pointer hover:bg-blue-900/20 active:scale-95 transition-all"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                const bonus = action.hitOrDc?.replace(/[^0-9+-]/g, '');
+                                if (bonus) onRoll(`1d20${bonus.startsWith('+') || bonus.startsWith('-') ? bonus : `+${bonus}`}`, `${action.name} Attack`);
+                            }}
+                        >
+                            <span className="text-[6px] uppercase font-black opacity-60">To Hit</span>
+                            <span className="text-[11px] font-black">{action.hitOrDc}</span>
+                        </div>
+                    )}
+                    {action.damage && (
+                        <div
+                            className="bg-red-900/10 border border-red-500/30 text-red-500 rounded-md px-2 h-9 min-w-[4rem] flex flex-col items-center justify-center leading-none cursor-pointer hover:bg-red-900/20 active:scale-95 transition-all"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                const notation = action.damage?.split(' ')[0];
+                                if (notation) onRoll(notation, `${action.name} Damage`);
+                                if (!isUsed) toggleUsed(actionId);
+                            }}
+                        >
+                            <span className="text-[6px] uppercase font-black opacity-80">Damage</span>
+                            <span className="text-[10px] font-black">{action.damage.split(' ')[0]}</span>
+                        </div>
+                    )}
                 </div>
             </div>
 

@@ -23,7 +23,7 @@ export const MarkdownDescription: React.FC<MarkdownDescriptionProps> = ({ conten
     const parts = resolvedContent.split(diceRegex);
 
     return (
-        <div className="text-[var(--text-secondary)] text-xs leading-relaxed">
+        <div className="text-[var(--text-muted)] text-xs leading-relaxed">
             {parts.map((part, index) => {
                 if (part.match(diceRegex)) {
                     return <InlineRoll key={index} notation={part} />;

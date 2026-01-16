@@ -1,10 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import type { FilterState, QuickFilters, PinnedChar, RollResult, Action, Spell, InventoryItem } from '../types/character';
+import type { FilterState, QuickFilters, PinnedChar, RollResult, Action, Spell, InventoryItem, SpellSlot } from '../types/character';
 import type { DDBCharacter } from '../types/dnd-beyond';
 import { useCharacter } from '../hooks/useCharacter';
 import { usePinnedCharacters } from '../hooks/usePinnedCharacters';
 import { useDice } from '../hooks/useDice';
-import { getActions, getSpells, getInventory } from '../dnd-utils';
+import { getActions, getSpells, getInventory, getSpellSlots } from '../dnd-utils';
 
 interface AppContextType {
     // Navigation & View State
@@ -54,6 +54,18 @@ interface AppContextType {
     allActions: Action[];
     allInventory: InventoryItem[];
     allTags: string[];
+    spellSlots: SpellSlot[];
+
+    // Tactical Awareness (Milestone 2)
+    concentratingOn: string | null;
+    setConcentratingOn: (spellName: string | null) => void;
+
+    // Intelligent Automation (Milestone 3)
+    isHasted: boolean;
+    consumeSpellSlot: (level: number) => void;
+    usedIds: Set<string>;
+    toggleUsed: (id: string) => void;
+    resetTurn: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -66,6 +78,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [theme, setTheme] = useState<'dark' | 'light'>('dark');
     const [showAdvanced, setShowAdvanced] = useState(false);
+    const [concentratingOn, setConcentratingOn] = useState<string | null>(null);
+    const [slotOverrides, setSlotOverrides] = useState<Record<number, number>>({});
+    const [usedIds, setUsedIds] = useState<Set<string>>(new Set());
 
     const { character, loading, error, fetchCharacter } = useCharacter();
     const { pinned, togglePin, removePin, updatePinnedData } = usePinnedCharacters();
@@ -94,6 +109,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const data = await fetchCharacter(id);
         if (data) {
             updatePinnedData(data, id);
+            setSlotOverrides({}); // Reset overrides on successful fetch
+            setUsedIds(new Set()); // Reset spent actions on character switch
             if (autoSwitch) {
                 setView('sheet');
                 setSheetMode('main');
@@ -111,13 +128,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 if (result.lastCharId) {
                     const id = result.lastCharId as string;
                     setCharId(id);
+                    // We only want to auto-fetch once on mount. 
+                    // Subsequent changes to handleFetch should NOT trigger this.
                     handleFetch(id, false);
                 } else {
                     setViewState('list');
                 }
             });
         }
-    }, [handleFetch]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const goHome = () => {
         setView('list');
@@ -135,6 +155,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const allTags = useMemo(() =>
         Array.from(new Set(allSpells.flatMap(s => s.tags || []))).filter((t): t is string => !!t).sort(),
         [allSpells]);
+
+    const spellSlots = useMemo(() => {
+        const baseSlots = character ? getSpellSlots(character) : [];
+        if (Object.keys(slotOverrides).length === 0) return baseSlots;
+
+        return baseSlots.map(slot => ({
+            ...slot,
+            available: Math.max(0, (slot.available ?? (slot.max - slot.used)) - (slotOverrides[slot.level] || 0)),
+            used: slot.used + (slotOverrides[slot.level] || 0)
+        }));
+    }, [character, slotOverrides]);
+
+    const consumeSpellSlot = useCallback((level: number) => {
+        setSlotOverrides(prev => ({
+            ...prev,
+            [level]: (prev[level] || 0) + 1
+        }));
+    }, []);
+
+    const toggleUsed = useCallback((id: string) => {
+        setUsedIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    }, []);
+
+    const resetTurn = useCallback(() => setUsedIds(new Set()), []);
+
+    const isHasted = useMemo(() => {
+        if (!character) return false;
+        const hasteLower = 'haste';
+        return (
+            (character.appliedConditions || []).some(c => c?.definition?.name?.toLowerCase() === hasteLower) ||
+            (character.statusEffects || []).some(s => s?.name?.toLowerCase() === hasteLower)
+        );
+    }, [character]);
 
     const value: AppContextType = {
         view,
@@ -170,7 +228,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         allSpells,
         allActions,
         allInventory,
-        allTags
+        allTags,
+        spellSlots,
+        concentratingOn,
+        setConcentratingOn,
+        isHasted,
+        consumeSpellSlot,
+        usedIds,
+        toggleUsed,
+        resetTurn
     };
 
     return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

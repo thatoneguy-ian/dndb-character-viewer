@@ -8,6 +8,8 @@ import { SpellItem } from './SpellItem';
 import { ActionItem } from './ActionItem';
 import { CombatDashboard } from './CombatDashboard';
 import { ConsumableItem } from './ConsumableItem';
+import { ConcentrationBanner } from './ConcentrationBanner';
+import { StickyStatusBanner } from './StickyStatusBanner';
 import { Badge } from '../common';
 import type { Spell } from '../../types/character';
 
@@ -57,7 +59,9 @@ export const CharacterSheetView: React.FC = () => {
         <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
             {sheetMode === 'main' ? (
                 <>
+                    <StickyStatusBanner />
                     <SheetHeader />
+                    <ConcentrationBanner />
                     <ActionTabs />
                     {activeTab === 'Spell' && (
                         <>
@@ -74,9 +78,9 @@ export const CharacterSheetView: React.FC = () => {
                                 const lvl = Number(levelKey);
                                 return (
                                     <div key={lvl}>
-                                        <div className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] border-b border-gray-800/50 mb-3 mt-4 pb-1 flex items-center gap-2">
+                                        <div className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em] border-b border-[var(--border-color)]/50 mb-3 mt-4 pb-1 flex items-center gap-2">
                                             <span>{lvl === 0 ? "Cantrips" : `Level ${lvl} Spells`}</span>
-                                            <div className="h-px flex-1 bg-gray-800/30"></div>
+                                            <div className="h-px flex-1 bg-[var(--border-color)]/30"></div>
                                         </div>
                                         {spellsByLevel[lvl].map((spell, idx) => (
                                             <SpellItem
@@ -101,7 +105,7 @@ export const CharacterSheetView: React.FC = () => {
                         )}
 
                         {((activeTab === 'Combat' ? false : (activeTab === "Spell" ? filteredSpells.length : allActions.filter(act => act.type === activeTab).length)) === 0) && activeTab !== 'Combat' && (
-                            <div className="text-center text-gray-600 py-12 flex flex-col items-center gap-3">
+                            <div className="text-center text-[var(--text-muted)] py-12 flex flex-col items-center gap-3">
                                 <div className="text-4xl">🌑</div>
                                 <div className="text-xs font-bold uppercase tracking-widest italic">No {activeTab}s found.</div>
                             </div>
