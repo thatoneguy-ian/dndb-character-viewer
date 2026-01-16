@@ -106,3 +106,16 @@ export interface RollResult {
     total: number;
     timestamp: number;
 }
+
+export interface CombatCapability {
+    id: string;
+    name: string;
+    cost: 'Action' | 'Bonus' | 'Reaction' | 'Other';
+    type: 'Spell' | 'Action' | 'Item' | 'Consumable';
+    rollData?: { hitOrDc?: string, damage?: string };
+    resource?: { current: number, max: number };
+    description: string;
+    source: string;
+    range: string;
+    originalData: any;
+}

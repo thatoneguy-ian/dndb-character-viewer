@@ -10,7 +10,7 @@ interface AppContextType {
     // Navigation & View State
     view: 'list' | 'sheet';
     sheetMode: 'main' | 'inventory' | 'consumables';
-    activeTab: "Action" | "Bonus" | "Reaction" | "Other" | "Spell";
+    activeTab: "Combat" | "Action" | "Bonus" | "Reaction" | "Other" | "Spell";
     expandedId: string | null;
     theme: 'dark' | 'light';
     showAdvanced: boolean;
@@ -19,7 +19,7 @@ interface AppContextType {
     // Setters
     setView: (view: 'list' | 'sheet') => void;
     setSheetMode: React.Dispatch<React.SetStateAction<'main' | 'inventory' | 'consumables'>>;
-    setActiveTab: React.Dispatch<React.SetStateAction<"Action" | "Bonus" | "Reaction" | "Other" | "Spell">>;
+    setActiveTab: React.Dispatch<React.SetStateAction<"Combat" | "Action" | "Bonus" | "Reaction" | "Other" | "Spell">>;
     setExpandedId: React.Dispatch<React.SetStateAction<string | null>>;
     setTheme: React.Dispatch<React.SetStateAction<'dark' | 'light'>>;
     setShowAdvanced: React.Dispatch<React.SetStateAction<boolean>>;
@@ -62,7 +62,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const [view, setViewState] = useState<'list' | 'sheet'>('list');
     const [sheetMode, setSheetMode] = useState<'main' | 'inventory' | 'consumables'>('main');
     const [charId, setCharId] = useState('');
-    const [activeTab, setActiveTab] = useState<"Action" | "Bonus" | "Reaction" | "Other" | "Spell">("Action");
+    const [activeTab, setActiveTab] = useState<"Combat" | "Action" | "Bonus" | "Reaction" | "Other" | "Spell">("Combat");
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [theme, setTheme] = useState<'dark' | 'light'>('dark');
     const [showAdvanced, setShowAdvanced] = useState(false);
@@ -90,6 +90,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
     }, []);
 
+    const handleFetch = useCallback(async (id: string, autoSwitch = true) => {
+        const data = await fetchCharacter(id);
+        if (data) {
+            updatePinnedData(data, id);
+            if (autoSwitch) {
+                setView('sheet');
+                setSheetMode('main');
+            }
+        } else {
+            setView('list');
+        }
+    }, [fetchCharacter, updatePinnedData, setView]);
+
     // --- Initial Load ---
     useEffect(() => {
         if (typeof chrome !== 'undefined' && chrome.storage) {
@@ -104,20 +117,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 }
             });
         }
-    }, []);
-
-    const handleFetch = async (id: string, autoSwitch = true) => {
-        const data = await fetchCharacter(id);
-        if (data) {
-            updatePinnedData(data, id);
-            if (autoSwitch) {
-                setView('sheet');
-                setSheetMode('main');
-            }
-        } else {
-            setView('list');
-        }
-    };
+    }, [handleFetch]);
 
     const goHome = () => {
         setView('list');

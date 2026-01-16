@@ -6,6 +6,7 @@ import { SpellSlotBar } from './SpellSlotBar';
 import { FilterControls } from './FilterControls';
 import { SpellItem } from './SpellItem';
 import { ActionItem } from './ActionItem';
+import { CombatDashboard } from './CombatDashboard';
 import { ConsumableItem } from './ConsumableItem';
 import { Badge } from '../common';
 import type { Spell } from '../../types/character';
@@ -66,7 +67,9 @@ export const CharacterSheetView: React.FC = () => {
                     )}
 
                     <div className="pb-20 space-y-2 animate-in fade-in duration-300">
-                        {activeTab === 'Spell' ? (
+                        {activeTab === 'Combat' ? (
+                            <CombatDashboard />
+                        ) : activeTab === 'Spell' ? (
                             Object.keys(spellsByLevel).sort((a, b) => Number(a) - Number(b)).map(levelKey => {
                                 const lvl = Number(levelKey);
                                 return (
@@ -97,7 +100,7 @@ export const CharacterSheetView: React.FC = () => {
                             ))
                         )}
 
-                        {((activeTab === "Spell" ? filteredSpells.length : allActions.filter(act => act.type === activeTab).length) === 0) && (
+                        {((activeTab === 'Combat' ? false : (activeTab === "Spell" ? filteredSpells.length : allActions.filter(act => act.type === activeTab).length)) === 0) && activeTab !== 'Combat' && (
                             <div className="text-center text-gray-600 py-12 flex flex-col items-center gap-3">
                                 <div className="text-4xl">🌑</div>
                                 <div className="text-xs font-bold uppercase tracking-widest italic">No {activeTab}s found.</div>
