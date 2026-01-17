@@ -27,21 +27,40 @@ export const DiceLog = ({ history, onClear }: DiceLogProps) => {
             <div ref={scrollRef} className="max-h-32 overflow-y-auto custom-scrollbar space-y-2 px-2 py-1">
                 {history.map((roll, idx) => {
                     const isLatest = idx === 0;
+
+                    // Determine "Scent" color based on roll type
+                    let accentColor = isLatest ? 'var(--color-action)' : 'var(--text-secondary)';
+                    const borderColor = 'var(--border-color)';
+
+                    if (roll.rollType === 'attack') {
+                        accentColor = '#3B82F6'; // Blue
+                    } else if (roll.rollType === 'damage') {
+                        accentColor = '#EF4444'; // Red
+                    } else if (roll.rollType === 'save') {
+                        accentColor = '#A855F7'; // Purple
+                    } else if (roll.rollType === 'skill' || roll.rollType === 'check') {
+                        accentColor = '#10B981'; // Green
+                    }
+
                     return (
                         <div
                             key={roll.id}
                             className={`transition-all duration-300 rounded-lg p-2 border flex items-center justify-between animate-in slide-in-from-bottom-2 
                                 ${isLatest
-                                    ? 'bg-[var(--bg-card)] border-[var(--color-action)]/50 ring-1 ring-[var(--color-action)]/20 shadow-lg shadow-black/5 opacity-100'
-                                    : 'bg-[var(--bg-card)]/50 border-[var(--border-color)] opacity-50 hover:opacity-100 hover:bg-[var(--bg-card)] shadow-sm shadow-black/5'
+                                    ? 'bg-[var(--bg-card)] ring-1 shadow-lg shadow-black/5 opacity-100'
+                                    : 'bg-[var(--bg-card)]/50 opacity-50 hover:opacity-100 hover:bg-[var(--bg-card)] shadow-sm shadow-black/5'
                                 }`}
+                            style={{
+                                borderColor: isLatest ? accentColor : borderColor,
+                                boxShadow: isLatest ? `0 4px 6px -1px ${accentColor}20` : undefined
+                            }}
                         >
                             <div className="flex flex-col gap-1">
                                 <div className="flex items-center gap-2">
-                                    {roll.label && <span className="text-[10px] font-black uppercase tracking-tight" style={{ color: 'var(--text-primary)' }}>{roll.label}</span>}
+                                    {roll.label && <span className="text-[10px] font-black uppercase tracking-tight" style={{ color: isLatest ? accentColor : 'var(--text-primary)' }}>{roll.label}</span>}
                                     <span
                                         className="text-[9px] font-bold uppercase tracking-tighter"
-                                        style={{ color: isLatest ? 'var(--color-action)' : 'var(--text-secondary)' }}
+                                        style={{ color: isLatest ? accentColor : 'var(--text-secondary)' }}
                                     >
                                         {roll.notation}
                                     </span>
@@ -53,7 +72,7 @@ export const DiceLog = ({ history, onClear }: DiceLogProps) => {
                                             sides={r.sides}
                                             value={r.value}
                                             className="w-9 h-9"
-                                            style={{ color: isLatest ? 'var(--color-action)' : 'var(--text-secondary)' }}
+                                            style={{ color: isLatest ? accentColor : 'var(--text-secondary)' }}
                                         />
                                     ))}
                                     {roll.modifier !== 0 && (
@@ -69,9 +88,9 @@ export const DiceLog = ({ history, onClear }: DiceLogProps) => {
                             <div
                                 className="text-xl font-black px-3 py-1 rounded-md border text-center min-w-[44px] shadow-inner transition-all"
                                 style={{
-                                    backgroundColor: isLatest ? 'var(--text-primary)' : 'var(--bg-input)',
-                                    color: isLatest ? 'var(--bg-card)' : 'var(--text-primary)',
-                                    borderColor: isLatest ? 'var(--text-primary)' : 'var(--border-color)'
+                                    backgroundColor: isLatest ? accentColor : 'var(--bg-input)',
+                                    color: isLatest ? 'white' : 'var(--text-primary)',
+                                    borderColor: isLatest ? accentColor : 'var(--border-color)'
                                 }}
                             >
                                 {roll.total}

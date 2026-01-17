@@ -15,10 +15,10 @@ interface CombatActionItemProps {
 }
 
 export const CombatActionItem: React.FC<CombatActionItemProps> = ({ action, isOpen, onClick, isUsed, onToggleUsed }) => {
-    const { rollDice: onRoll, spellSlots, concentratingOn, setConcentratingOn, consumeSpellSlot } = useAppContext();
+    const { rollDice: onRoll, spellSlots, concentratingOn, setConcentratingOn, consumeSpellSlot, hasAttackDisadvantage } = useAppContext();
 
     const isSpell = action.type === 'Spell';
-    const sourceData = action.originalData;
+    const sourceData = action.originalData as any;
     const spellLevel = isSpell ? (sourceData?.definition?.level ?? 0) : 0;
     const isConcentration = isSpell && sourceData?.definition?.components?.includes(3); // 3 = Concentration in some DDB contexts, but let's check snippet or tags
     const actualIsConcentration = isConcentration || action.description.toLowerCase().includes('concentration');
@@ -29,6 +29,16 @@ export const CombatActionItem: React.FC<CombatActionItemProps> = ({ action, isOp
 
     const levelSlots = spellSlots.find(s => s.level === spellLevel);
     const isLowResource = isSpell && spellLevel > 0 && levelSlots && levelSlots.available === 0;
+
+    // US-801: Scent Color Calculation
+    const getScentColor = () => {
+        if (action.rollData?.damage || action.rollData?.damageType) return '#EF4444'; // Red (Damage)
+        const desc = action.description.toLowerCase();
+        if (desc.includes('heal') || desc.includes('restore') || desc.includes('hit points')) return '#10B981'; // Green (Healing)
+        if (action.type === 'Spell') return '#3B82F6'; // Blue (Spell/Control)
+        return 'transparent';
+    };
+    const scentColor = getScentColor();
 
     const handleConcentrate = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -41,10 +51,10 @@ export const CombatActionItem: React.FC<CombatActionItemProps> = ({ action, isOp
 
     const handleRollHit = (e: React.MouseEvent) => {
         e.stopPropagation();
-        const hitOrDc = action.rollData?.hitOrDc;
-        if (hitOrDc && !hitOrDc.includes('DC')) {
-            const bonus = hitOrDc.replace(/[^0-9+-]/g, '');
-            onRoll(`1d20${bonus.startsWith('+') || bonus.startsWith('-') ? bonus : `+${bonus}`}`, `${action.name} Attack`);
+        const hitBonus = action.rollData?.hitBonus;
+        if (hitBonus) {
+            const bonus = hitBonus.replace(/[^0-9+-]/g, '');
+            onRoll(`1d20${bonus.startsWith('+') || bonus.startsWith('-') ? bonus : `+${bonus}`}`, `${action.name} Attack`, 'attack');
         }
     };
 
@@ -66,7 +76,7 @@ export const CombatActionItem: React.FC<CombatActionItemProps> = ({ action, isOp
             }
 
             const rollNotation = notation.split(' ')[0];
-            onRoll(rollNotation, `${action.name} (Lvl ${castLevel}) Damage`);
+            onRoll(rollNotation, `${action.name} (Lvl ${castLevel}) Damage`, 'damage');
             if (onToggleUsed && !isUsed) onToggleUsed(action.id);
             if (isSpell && spellLevel > 0) consumeSpellSlot(castLevel);
         }
@@ -75,7 +85,8 @@ export const CombatActionItem: React.FC<CombatActionItemProps> = ({ action, isOp
 
     return (
         <Card
-            className={`mb-2 p-3 pb-2 transition-all ${isOpen ? 'ring-2 ring-[var(--color-action)]/50 bg-[var(--bg-card)] shadow-md' : 'bg-[var(--bg-card)]/40 hover:bg-[var(--bg-card)]/60 shadow-sm'} ${isLowResource || isUsed ? 'opacity-40 grayscale-[0.5]' : ''}`}
+            className={`mb-2 p-3 pb-2 transition-all border-l-4 ${isOpen ? 'ring-2 ring-[var(--color-action)]/50 bg-[var(--bg-card)] shadow-md' : 'bg-[var(--bg-card)]/40 hover:bg-[var(--bg-card)]/60 shadow-sm'} ${isLowResource || isUsed ? 'opacity-40 grayscale-[0.5]' : ''}`}
+            style={{ borderLeftColor: scentColor }}
             onClick={onClick}
         >
             {isUsed && (
@@ -98,10 +109,13 @@ export const CombatActionItem: React.FC<CombatActionItemProps> = ({ action, isOp
                                     {action.name} {isUsed && (
                                         <span
                                             className="text-[9px] text-green-500 font-black ml-1 uppercase cursor-pointer hover:underline"
-                                            onClick={(e) => { e.stopPropagation(); onToggleUsed && onToggleUsed(action.id); }}
+                                            onClick={(e) => { e.stopPropagation(); if (onToggleUsed) onToggleUsed(action.id); }}
                                         >
                                             Spent
                                         </span>
+                                    )}
+                                    {action.rollData?.hitBonus && hasAttackDisadvantage && (
+                                        <span className="text-[9px] font-black bg-orange-500/20 text-orange-500 px-1 rounded border border-orange-500/30 animate-pulse ml-1">DISADV</span>
                                     )}
                                 </h4>
                                 {isSpell && sourceData?.definition?.components?.includes(1) && action.description.toLowerCase().includes('ritual') && (
@@ -113,7 +127,13 @@ export const CombatActionItem: React.FC<CombatActionItemProps> = ({ action, isOp
                                     {action.cost === "Action" ? "🔴 Action" : action.cost === "Bonus" ? "🟢 Bonus" : action.cost === "Reaction" ? "🟡 Reaction" : action.cost}
                                 </span>
                                 <span className="text-[var(--text-muted)] opacity-50">•</span>
-                                <span className="text-[10px] text-[var(--text-secondary)] font-medium">{action.range}</span>
+                                <span className="text-[10px] text-[var(--text-secondary)] font-medium">
+                                    {action.range}
+                                    {action.duration && <span className="mx-1 opacity-40">|</span>}
+                                    {action.duration}
+                                    {action.target && <span className="mx-1 opacity-40">|</span>}
+                                    {action.target}
+                                </span>
                             </div>
                             {!isOpen && action.description && (
                                 <p className="text-[10px] text-[var(--text-muted)] mt-1 line-clamp-1 italic">
@@ -138,19 +158,24 @@ export const CombatActionItem: React.FC<CombatActionItemProps> = ({ action, isOp
                         </div>
                     )}
 
-                    {action.rollData?.hitOrDc && (
+                    {action.rollData?.hitBonus && (
                         <Button
                             variant="secondary"
                             size="sm"
-                            disabled={action.rollData.hitOrDc.includes('DC')}
-                            className={`bg-blue-900/10 border-blue-500/30 text-blue-400 hover:bg-blue-900/20 active:scale-95 px-2 h-9 min-w-[3.5rem] transition-all ${action.rollData.hitOrDc.includes('DC') ? 'opacity-50 cursor-default grayscale' : ''}`}
+                            className="bg-blue-900/10 border-blue-500/30 text-blue-400 hover:bg-blue-900/20 active:scale-95 px-2 h-9 min-w-[3.5rem] transition-all"
                             onClick={handleRollHit}
                         >
                             <div className="flex flex-col items-center leading-none">
-                                <span className="text-[9px] uppercase font-black opacity-60">{action.rollData.hitOrDc.includes('DC') ? 'DC' : 'To Hit'}</span>
-                                <span className="text-[12px] font-black">{action.rollData.hitOrDc}</span>
+                                <span className="text-[9px] uppercase font-black opacity-60">To Hit</span>
+                                <span className="text-[12px] font-black">{action.rollData.hitBonus}</span>
                             </div>
                         </Button>
+                    )}
+                    {action.rollData?.saveDC && (
+                        <div className="bg-gray-800/50 border border-gray-700/50 text-gray-400 rounded-md px-2 h-9 min-w-[3.5rem] flex flex-col items-center justify-center leading-none opacity-80">
+                            <span className="text-[9px] uppercase font-black opacity-60">Save DC</span>
+                            <span className="text-[12px] font-black">{action.rollData.saveDC}</span>
+                        </div>
                     )}
                     {action.rollData?.damage && (
                         <Button
@@ -160,15 +185,36 @@ export const CombatActionItem: React.FC<CombatActionItemProps> = ({ action, isOp
                             onClick={handleRollDamage}
                         >
                             <div className="flex flex-col items-center leading-none">
-                                <span className="text-[9px] uppercase font-black opacity-80">Damage</span>
+                                <span className="text-[9px] uppercase font-black opacity-80 decoration-transparent">
+                                    {action.rollData.damageType || 'Damage'}
+                                </span>
                                 <span className="text-[11px] font-black">{action.rollData.damage.split(' ')[0]}</span>
                             </div>
                         </Button>
                     )}
                     {action.resource && (
-                        <div className="h-9 min-w-[2.5rem] flex flex-col items-center justify-center bg-gray-800/50 border border-gray-700/50 rounded-lg">
-                            <span className="text-[9px] uppercase font-black opacity-60">Uses</span>
-                            <span className="text-xs font-black text-[var(--text-primary)]">{action.resource.current}</span>
+                        <div className="flex flex-col items-center justify-center min-w-[2.5rem]">
+                            <span className="text-[8px] uppercase font-black opacity-60 mb-0.5">Uses</span>
+                            <div className="flex flex-wrap gap-0.5 justify-center max-w-[40px]">
+                                {action.resource.max <= 10 ? (
+                                    Array.from({ length: action.resource.max }).map((_, i) => (
+                                        <div
+                                            key={i}
+                                            className={`w-1.5 h-1.5 rounded-full border border-[var(--border-color)]/30 ${i < (action.resource?.current ?? 0) ? 'bg-[var(--color-resource)] shadow-[0_0_3px_var(--color-resource)]' : 'bg-gray-800/50'}`}
+                                        />
+                                    ))
+                                ) : (
+                                    <div className="flex flex-col items-center">
+                                        <div className="w-10 h-1.5 bg-gray-800/50 rounded-full border border-[var(--border-color)]/30 overflow-hidden">
+                                            <div
+                                                className="h-full bg-[var(--color-resource)] transition-all duration-300"
+                                                style={{ width: `${((action.resource?.current ?? 0) / (action.resource?.max ?? 1)) * 100}%` }}
+                                            />
+                                        </div>
+                                        <span className="text-[10px] font-black mt-0.5">{action.resource.current}</span>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
                 </div>

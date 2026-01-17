@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { Button } from '../common';
-import { Shield, RotateCcw } from 'lucide-react';
+import { Shield, RotateCcw, Zap, Activity } from 'lucide-react';
 import { calculateHP, calculateAC } from '../../utils/calculators';
 
 export const StickyStatusBanner: React.FC = () => {
-    const { character, resetTurn } = useAppContext();
+    const { character, resetTurn, concentratingOn, isHasted } = useAppContext();
     const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
@@ -36,11 +36,25 @@ export const StickyStatusBanner: React.FC = () => {
 
                     <div className="flex-1 flex flex-col gap-1">
                         <div className="flex justify-between items-center px-0.5">
-                            <span className="text-[9px] font-black text-[var(--text-primary)] uppercase tracking-tighter">HP {hp.current}/{hp.max}</span>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-[9px] font-black text-[var(--text-primary)] uppercase tracking-tighter">HP {hp.current}/{hp.max}</span>
+                                <span className="text-[var(--text-muted)] opacity-30">•</span>
                                 <span className="text-[9px] font-black text-[var(--text-primary)] flex items-center gap-1">
-                                    <Shield className="w-2.5 h-2.5 text-[var(--color-resource)]" /> AC {ac}
+                                    <Shield className="w-2.5 h-2.5 text-[var(--color-resource)]" /> {ac}
                                 </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {isHasted && (
+                                    <div className="bg-amber-500/20 text-amber-500 rounded p-0.5 animate-pulse" title="Hasted">
+                                        <Zap className="w-2.5 h-2.5 fill-amber-500" />
+                                    </div>
+                                )}
+                                {concentratingOn && (
+                                    <div className="flex items-center gap-1 bg-blue-500/20 text-blue-400 rounded px-1.5 py-0.5 border border-blue-500/30">
+                                        <Activity className="w-2.5 h-2.5 animate-pulse" />
+                                        <span className="text-[8px] font-black uppercase tracking-tighter truncate max-w-[60px]">{concentratingOn}</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
                         <div className="h-1.5 w-full bg-[var(--bg-input)] rounded-full overflow-hidden border border-[var(--border-color)]/50">

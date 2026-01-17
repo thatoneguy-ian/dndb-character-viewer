@@ -1,10 +1,10 @@
 import { useState, useCallback } from 'react';
 import type { RollResult, DiceType, DiceRoll } from '../types/character';
 
-export function useDice() {
+export function useDice(onCritical?: (type: 'success' | 'failure') => void) {
     const [history, setHistory] = useState<RollResult[]>([]);
 
-    const rollDice = useCallback((notation: string, label?: string) => {
+    const rollDice = useCallback((notation: string, label?: string, type?: RollResult['rollType']) => {
         // Regex to parse notation: [count]d[sides][+|-][modifier]
         // Example matches: "d20", "1d20", "2d6+4", "1d8 + 4"
         const regex = /^(\d+)?d(\d+)(?:\s*([+-])\s*(\d+))?$/i;
@@ -25,12 +25,19 @@ export function useDice() {
             const val = Math.floor(Math.random() * sides) + 1;
             rolls.push({ sides, value: val });
             rollSum += val;
+
+            // US-802: Detect Criticals
+            if (sides === 20 && onCritical) {
+                if (val === 20) onCritical('success');
+                if (val === 1) onCritical('failure');
+            }
         }
 
         const result: RollResult = {
             id: Math.random().toString(36).substring(2, 11),
             notation,
             label,
+            rollType: type,
             rolls,
             modifier,
             total: rollSum + modifier,
@@ -39,7 +46,7 @@ export function useDice() {
 
         setHistory(prev => [result, ...prev].slice(0, 50)); // Keep last 50
         return result;
-    }, []);
+    }, [onCritical]);
 
     const clearHistory = useCallback(() => {
         setHistory([]);

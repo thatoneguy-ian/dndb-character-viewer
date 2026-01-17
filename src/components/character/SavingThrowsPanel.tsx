@@ -41,7 +41,7 @@ export const SavingThrowsPanel: React.FC = () => {
                                     <button
                                         className="absolute inset-0 bg-red-600 rounded opacity-0 group-hover/roll:opacity-100 transition-opacity duration-200 flex items-center justify-center shadow-lg shadow-red-900/40"
                                         onClick={() => {
-                                            rollDice(`1d20${save.bonus}`, `${save.name} Save`);
+                                            rollDice(`1d20${save.bonus}`, `${save.name} Save`, 'save');
                                         }}
                                     >
                                         <span className="text-[7px] font-black text-white uppercase tracking-tighter">Roll</span>

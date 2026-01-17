@@ -16,19 +16,24 @@ export function useCombatActions() {
                 cost: action.type,
                 type: 'Action',
                 rollData: {
-                    hitOrDc: action.hitOrDc && !action.hitOrDc.includes('(') ? action.hitOrDc : undefined,
-                    damage: action.damage
+                    hitBonus: action.hitBonus,
+                    saveDC: action.saveDC,
+                    damage: action.damage,
+                    damageType: action.damageType
                 },
                 description: action.description,
                 source: action.source,
                 range: action.range,
-                originalData: action
+                duration: action.duration,
+                target: action.target,
+                originalData: action,
+                resource: action.resource
             });
         });
 
         // 2. Process Spells (Only combat-relevant ones)
         allSpells.forEach(spell => {
-            const isCombat = spell.damage || spell.hitOrDc || spell.tags?.some(t =>
+            const isCombat = spell.damage || spell.hitBonus || spell.saveDC || spell.tags?.some(t =>
                 ['Damage', 'Control', 'Buff', 'Debuff', 'Healing', 'Combat'].includes(t)
             ) || spell.castingType === 'Reaction';
 
@@ -39,12 +44,16 @@ export function useCombatActions() {
                     cost: spell.castingType || 'Other',
                     type: 'Spell',
                     rollData: {
-                        hitOrDc: spell.hitOrDc,
-                        damage: spell.damage
+                        hitBonus: spell.hitBonus,
+                        saveDC: spell.saveDC,
+                        damage: spell.damage,
+                        damageType: spell.damageType
                     },
                     description: spell.description,
                     source: spell.source,
                     range: spell.range,
+                    duration: spell.duration,
+                    target: spell.target,
                     originalData: spell
                 });
             }

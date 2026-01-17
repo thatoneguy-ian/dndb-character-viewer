@@ -51,17 +51,23 @@ export const ActionItem: React.FC<ActionItemProps> = ({ action, isOpen, onClick 
                 </div>
 
                 <div className="flex gap-1 self-center">
-                    {action.hitOrDc && (
+                    {action.hitBonus && (
                         <div
                             className="bg-blue-900/10 border border-blue-500/30 text-blue-400 rounded-md px-2 h-9 min-w-[3.5rem] flex flex-col items-center justify-center leading-none cursor-pointer hover:bg-blue-900/20 active:scale-95 transition-all"
                             onClick={(e) => {
                                 e.stopPropagation();
-                                const bonus = action.hitOrDc?.replace(/[^0-9+-]/g, '');
-                                if (bonus) onRoll(`1d20${bonus.startsWith('+') || bonus.startsWith('-') ? bonus : `+${bonus}`}`, `${action.name} Attack`);
+                                const bonus = action.hitBonus?.replace(/[^0-9+-]/g, '');
+                                if (bonus) onRoll(`1d20${bonus.startsWith('+') || bonus.startsWith('-') ? bonus : `+${bonus}`}`, `${action.name} Attack`, 'attack');
                             }}
                         >
                             <span className="text-[6px] uppercase font-black opacity-60">To Hit</span>
-                            <span className="text-[11px] font-black">{action.hitOrDc}</span>
+                            <span className="text-[11px] font-black">{action.hitBonus}</span>
+                        </div>
+                    )}
+                    {action.saveDC && (
+                        <div className="bg-gray-800/40 border border-gray-700/40 text-gray-400 rounded-md px-2 h-9 min-w-[3.5rem] flex flex-col items-center justify-center leading-none opacity-80">
+                            <span className="text-[6px] uppercase font-black opacity-60">Save DC</span>
+                            <span className="text-[11px] font-black">{action.saveDC}</span>
                         </div>
                     )}
                     {action.damage && (
@@ -70,11 +76,13 @@ export const ActionItem: React.FC<ActionItemProps> = ({ action, isOpen, onClick 
                             onClick={(e) => {
                                 e.stopPropagation();
                                 const notation = action.damage?.split(' ')[0];
-                                if (notation) onRoll(notation, `${action.name} Damage`);
+                                if (notation) onRoll(notation, `${action.name} Damage`, 'damage');
                                 if (!isUsed) toggleUsed(actionId);
                             }}
                         >
-                            <span className="text-[6px] uppercase font-black opacity-80">Damage</span>
+                            <span className="text-[6px] uppercase font-black opacity-80">
+                                {action.damageType || 'Damage'}
+                            </span>
                             <span className="text-[10px] font-black">{action.damage.split(' ')[0]}</span>
                         </div>
                     )}

@@ -41,22 +41,28 @@ export const Button: React.FC<ButtonProps> = ({
 };
 
 // --- CARD ---
-export const Card: React.FC<{ children: React.ReactNode; className?: string; onClick?: () => void }> = ({
+interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+    children: React.ReactNode;
+}
+
+export const Card: React.FC<CardProps> = ({
     children,
     className = '',
-    onClick
+    onClick,
+    ...props
 }) => (
     <div
         onClick={onClick}
         onKeyDown={(e) => {
             if (onClick && (e.key === 'Enter' || e.key === ' ')) {
                 e.preventDefault();
-                onClick();
+                onClick(e as any);
             }
         }}
         role={onClick ? "button" : undefined}
         tabIndex={onClick ? 0 : undefined}
         className={`bg-[var(--bg-card)] backdrop-blur-sm border border-[var(--border-color)] rounded-lg overflow-hidden transition-all duration-300 ${onClick ? 'cursor-pointer hover:border-[var(--text-secondary)]/50 hover:bg-[var(--bg-app)]/50 shadow-md shadow-black/5 focus:outline-none focus:ring-2 focus:ring-[var(--color-action)]' : 'shadow-sm shadow-black/5'} ${className}`}
+        {...props}
     >
         {children}
     </div>

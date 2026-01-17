@@ -49,7 +49,7 @@ export const SkillsPanel: React.FC = () => {
                                     <button
                                         className="absolute inset-0 bg-blue-600 rounded opacity-0 group-hover/roll:opacity-100 transition-opacity duration-200 flex items-center justify-center shadow-lg shadow-blue-900/40"
                                         onClick={() => {
-                                            rollDice(`1d20${skill.bonus}`, `${skill.name} Roll`);
+                                            rollDice(`1d20${skill.bonus}`, `${skill.name} Roll`, 'skill');
                                         }}
                                     >
                                         <span className="text-[7px] font-black text-white uppercase tracking-tighter">Roll</span>

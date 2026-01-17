@@ -15,7 +15,7 @@ interface SpellItemProps {
 }
 
 export const SpellItem: React.FC<SpellItemProps> = ({ spell, isOpen, onClick }) => {
-    const { rollDice: onRoll, spellSlots, concentratingOn, setConcentratingOn, consumeSpellSlot, usedIds, toggleUsed } = useAppContext();
+    const { rollDice: onRoll, spellSlots, concentratingOn, setConcentratingOn, consumeSpellSlot, usedIds, toggleUsed, hasAttackDisadvantage } = useAppContext();
     const [castLevel, setCastLevel] = useState(spell.level);
 
     const IconComp = SCHOOL_ICON_MAP[spell.school as keyof typeof SCHOOL_ICON_MAP];
@@ -53,13 +53,22 @@ export const SpellItem: React.FC<SpellItemProps> = ({ spell, isOpen, onClick }) 
             }
         }
 
-        onRoll(notation, `${spell.name} (Lvl ${castLevel}) Damage`);
         if (!isUsed) toggleUsed(spellId);
     };
 
+    // US-801: Scent Color Calculation
+    const getScentColor = () => {
+        if (spell.damage || spell.damageType) return '#EF4444'; // Red (Damage)
+        const desc = spell.description.toLowerCase();
+        if (desc.includes('heal') || desc.includes('restore') || desc.includes('hit points')) return '#10B981'; // Green (Healing)
+        return '#3B82F6'; // Blue (Spell/Control)
+    };
+    const scentColor = getScentColor();
+
     return (
         <Card
-            className={`mb-2 p-3 transition-all ${isOpen ? 'ring-2 ring-[var(--color-action)]/50 bg-[var(--bg-card)] shadow-md' : 'bg-[var(--bg-card)]/40 hover:bg-[var(--bg-card)]/60 shadow-sm'} ${isLowResource || isUsed ? 'opacity-40 grayscale-[0.5]' : ''}`}
+            className={`mb-2 p-3 transition-all border-l-4 ${isOpen ? 'ring-2 ring-[var(--color-action)]/50 bg-[var(--bg-card)] shadow-md' : 'bg-[var(--bg-card)]/40 hover:bg-[var(--bg-card)]/60 shadow-sm'} ${isLowResource || isUsed ? 'opacity-40 grayscale-[0.5]' : ''}`}
+            style={{ borderLeftColor: scentColor }}
             onClick={onClick}
         >
             <div className="flex justify-between items-start gap-4">
@@ -74,6 +83,9 @@ export const SpellItem: React.FC<SpellItemProps> = ({ spell, isOpen, onClick }) 
                                 >
                                     Spent
                                 </span>
+                            )}
+                            {spell.hitBonus && hasAttackDisadvantage && (
+                                <span className="text-[9px] font-black bg-orange-500/20 text-orange-500 px-1 rounded border border-orange-500/30 animate-pulse ml-1">DISADV</span>
                             )}
                         </h4>
                         {spell.components.toLowerCase().includes('ritual') && (
@@ -92,7 +104,13 @@ export const SpellItem: React.FC<SpellItemProps> = ({ spell, isOpen, onClick }) 
                             {spell.castingTime}
                         </span>
                         <span className="text-[var(--text-secondary)] opacity-50">•</span>
-                        <span className="text-[10px] text-[var(--text-secondary)] font-medium">{spell.range}</span>
+                        <span className="text-[10px] text-[var(--text-secondary)] font-medium">
+                            {spell.range}
+                            {spell.duration && <span className="mx-1 opacity-40">|</span>}
+                            {spell.duration}
+                            {spell.target && <span className="mx-1 opacity-40">|</span>}
+                            {spell.target}
+                        </span>
                         {spell.level > 0 && levelSlots && typeof levelSlots.available === 'number' && (
                             <Badge
                                 className={`ml-1 py-0 px-1 text-[9px] font-black border-none cursor-pointer hover:scale-110 active:scale-95 transition-all ${levelSlots.available > 0 ? 'bg-[var(--color-success)]/20 text-[var(--color-success)]' : 'bg-[var(--color-danger)]/20 text-[var(--color-danger)]'}`}
@@ -128,25 +146,32 @@ export const SpellItem: React.FC<SpellItemProps> = ({ spell, isOpen, onClick }) 
                         </div>
                     )}
 
-                    {spell.hitOrDc && (
+                    {spell.hitBonus && (
                         <div
-                            className={`bg-blue-900/10 border-blue-500/30 text-blue-400 rounded-md px-2 h-9 min-w-[3.5rem] flex flex-col items-center justify-center leading-none transition-all ${spell.hitOrDc.includes('DC') ? 'opacity-50 cursor-default grayscale' : 'cursor-pointer hover:bg-blue-900/20 active:scale-95'}`}
+                            className="bg-blue-900/10 border-blue-500/30 text-blue-400 rounded-md px-2 h-9 min-w-[3.5rem] flex flex-col items-center justify-center leading-none transition-all cursor-pointer hover:bg-blue-900/20 active:scale-95"
                             onClick={(e) => {
                                 e.stopPropagation();
-                                if (spell.hitOrDc.includes('DC')) return;
-                                const bonus = spell.hitOrDc?.replace(/[^0-9+-]/g, '');
-                                if (bonus) onRoll(`1d20${bonus.startsWith('+') || bonus.startsWith('-') ? bonus : `+${bonus}`}`, `${spell.name} (To Hit/DC)`);
+                                const bonus = spell.hitBonus?.replace(/[^0-9+-]/g, '');
+                                if (bonus) onRoll(`1d20${bonus.startsWith('+') || bonus.startsWith('-') ? bonus : `+${bonus}`}`, `${spell.name} (To Hit)`, 'attack');
                             }}
                         >
-                            <span className="text-[6px] uppercase font-black opacity-60">{spell.hitOrDc.includes('DC') ? 'Save DC' : 'To Hit'}</span>
-                            <span className="text-[11px] font-black">{spell.hitOrDc}</span>
+                            <span className="text-[6px] uppercase font-black opacity-60">To Hit</span>
+                            <span className="text-[11px] font-black">{spell.hitBonus}</span>
+                        </div>
+                    )}
+                    {spell.saveDC && (
+                        <div className="bg-gray-800/50 border border-gray-700/50 text-gray-400 rounded-md px-2 h-9 min-w-[3.5rem] flex flex-col items-center justify-center leading-none opacity-80">
+                            <span className="text-[6px] uppercase font-black opacity-60">Save DC</span>
+                            <span className="text-[11px] font-black">{spell.saveDC}</span>
                         </div>
                     )}
                     <div
                         className="bg-red-900/10 border border-red-500/30 text-red-500 rounded-md px-2 h-9 min-w-[4rem] flex flex-col items-center justify-center leading-none cursor-pointer hover:bg-red-900/20 active:scale-95 transition-all shadow-sm shadow-red-500/5"
                         onClick={handleRollDamage}
                     >
-                        <span className="text-[6px] uppercase font-black opacity-80 decoration-transparent">Damage</span>
+                        <span className="text-[6px] uppercase font-black opacity-80 decoration-transparent">
+                            {spell.damageType || 'Damage'}
+                        </span>
                         <span className="text-[10px] font-black">
                             {spell.damage.includes('d') && castLevel > spell.level
                                 ? `${parseInt(spell.damage) + (castLevel - spell.level)}d${spell.damage.split('d')[1].split(' ')[0]}`

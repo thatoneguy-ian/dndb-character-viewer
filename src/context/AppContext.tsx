@@ -40,7 +40,7 @@ interface AppContextType {
 
     // Dice History
     history: RollResult[];
-    rollDice: (notation: string, label?: string) => RollResult | null;
+    rollDice: (notation: string, label?: string, type?: RollResult['rollType']) => RollResult | null;
     clearHistory: () => void;
 
     // Filters
@@ -60,12 +60,16 @@ interface AppContextType {
     concentratingOn: string | null;
     setConcentratingOn: (spellName: string | null) => void;
 
-    // Intelligent Automation (Milestone 3)
+    // Intelligent Automation (Milestone 3/6)
     isHasted: boolean;
+    hasAttackDisadvantage: boolean;
     consumeSpellSlot: (level: number) => void;
     usedIds: Set<string>;
     toggleUsed: (id: string) => void;
     resetTurn: () => void;
+
+    // US-802: Feedback Engine
+    lastCritical: 'success' | 'failure' | null;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -81,10 +85,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const [concentratingOn, setConcentratingOn] = useState<string | null>(null);
     const [slotOverrides, setSlotOverrides] = useState<Record<number, number>>({});
     const [usedIds, setUsedIds] = useState<Set<string>>(new Set());
+    const [lastCritical, setLastCritical] = useState<'success' | 'failure' | null>(null);
 
     const { character, loading, error, fetchCharacter } = useCharacter();
     const { pinned, togglePin, removePin, updatePinnedData } = usePinnedCharacters();
-    const { history, rollDice, clearHistory } = useDice();
+
+    const handleCritical = useCallback((type: 'success' | 'failure') => {
+        setLastCritical(type);
+        setTimeout(() => setLastCritical(null), 1500);
+    }, []);
+
+    const { history, rollDice, clearHistory } = useDice(handleCritical);
 
     const [filters, setFilters] = useState<FilterState>({
         attackOnly: false,
@@ -194,6 +205,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         );
     }, [character]);
 
+    const hasAttackDisadvantage = useMemo(() => {
+        if (!character) return false;
+        const conditions = [
+            ...(character.appliedConditions || []).map(c => c?.definition?.name?.toLowerCase()),
+            ...(character.statusEffects || []).map(s => s?.name?.toLowerCase())
+        ];
+        const disadvantageConditions = ['blinded', 'frightened', 'poisoned', 'restrained', 'prone'];
+        return conditions.some(c => disadvantageConditions.includes(c));
+    }, [character]);
+
     const value: AppContextType = {
         view,
         sheetMode,
@@ -233,10 +254,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         concentratingOn,
         setConcentratingOn,
         isHasted,
+        hasAttackDisadvantage,
         consumeSpellSlot,
         usedIds,
         toggleUsed,
-        resetTurn
+        resetTurn,
+        lastCritical
     };
 
     return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

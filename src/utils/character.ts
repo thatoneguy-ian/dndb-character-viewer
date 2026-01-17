@@ -1,7 +1,15 @@
 import type { DDBCharacter, DDBAction, DDBItem, DDBSpell, DDBModifier } from '../types/dnd-beyond';
 import type { Action, Spell, InventoryItem } from '../types/character';
-import { getModifier, getStatValue, getProficiencyBonus } from './modifiers';
+import { getModifier, getStatValue } from './modifiers';
 import { parseSummonStats } from './parsing';
+
+const DAMAGE_TYPES = [
+    'slashing', 'piercing', 'bludgeoning',
+    'fire', 'cold', 'lightning', 'thunder', 'acid', 'poison',
+    'psychic', 'radiant', 'necrotic', 'force'
+];
+
+const damageTypeRegex = new RegExp(`(${DAMAGE_TYPES.join('|')})`, 'i');
 
 export function getClasses(character: DDBCharacter): string[] {
     if (!character || !character.classes) return [];
@@ -31,15 +39,8 @@ export function getActions(character: DDBCharacter): Action[] {
             else if (actType === 3) type = "Bonus";
             else if (actType === 4) type = "Reaction";
 
-            let limit = "";
-            if (item.limitedUse) {
-                const max = item.limitedUse.maxUses;
-                const used = item.limitedUse.numberUsed || 0;
-                const remaining = max - used;
-                if (max) limit = `(${remaining}/${max})`;
-            }
-
-            let hitOrDc = limit;
+            let hitBonus: string | undefined = undefined;
+            const saveDC: string | undefined = undefined;
             let damage = "";
 
             if (item.isAttack || item.attackBonusModifierTotal != null || item.dice?.diceString) {
@@ -52,7 +53,7 @@ export function getActions(character: DDBCharacter): Action[] {
                         bonus += (isMonk ? Math.max(strMod, dexMod) : strMod);
                     }
 
-                    hitOrDc = bonus >= 0 ? `+${bonus}` : `${bonus}`;
+                    hitBonus = bonus >= 0 ? `+${bonus}` : `${bonus}`;
                 }
 
                 if (item.dice?.diceString) {
@@ -61,17 +62,30 @@ export function getActions(character: DDBCharacter): Action[] {
                 }
             }
 
+            const desc = item.snippet || item.description || "";
+            const durationMatch = desc.match(/Duration:\s*([^.<]+)/i);
+            const targetMatch = desc.match(/Target:\s*([^.<]+)/i);
+            const dmgTypeMatch = desc.match(damageTypeRegex);
+
             allActions.push({
                 id: item.id || item.name,
                 name: item.name,
-                description: item.snippet || item.description || "",
+                description: desc,
                 type,
                 source: sourceName,
-                hitOrDc,
+                hitBonus,
+                saveDC,
                 damage,
+                damageType: dmgTypeMatch ? dmgTypeMatch[1].toLowerCase() : undefined,
                 range: item.range && item.range.rangeValue ? `${item.range.rangeValue}ft` : "",
+                duration: durationMatch ? durationMatch[1].trim() : undefined,
+                target: targetMatch ? targetMatch[1].trim() : undefined,
                 attackType: sourceName,
-                className
+                className,
+                resource: item.limitedUse ? {
+                    current: item.limitedUse.maxUses - item.limitedUse.numberUsed,
+                    max: item.limitedUse.maxUses
+                } : undefined
             });
         });
     };
@@ -147,13 +161,20 @@ export function getActions(character: DDBCharacter): Action[] {
                 if (def.attackType === 2) attackLabel = "Ranged Weapon";
                 if (def.filterType === "Staff") attackLabel = "Melee Weapon";
 
+                let damageType = def.damageType?.toLowerCase();
+                if (!damageType) {
+                    const typeMatch = (def.description || "").match(damageTypeRegex);
+                    if (typeMatch) damageType = typeMatch[1].toLowerCase();
+                }
+
                 allActions.push({
                     id: item.id,
                     name: def.name,
                     type: "Action",
                     source: "Weapon",
-                    hitOrDc: hitString,
+                    hitBonus: hitString,
                     damage: damageString,
+                    damageType,
                     range: `${rangeValue}ft`,
                     description: def.description || "",
                     attackType: attackLabel
@@ -169,8 +190,7 @@ const PREPARED_CASTERS = ["Cleric", "Druid", "Wizard", "Paladin", "Artificer"];
 
 export function getSpells(character: DDBCharacter): Spell[] {
     const spells: Spell[] = [];
-
-    const profBonus = getProficiencyBonus(character);
+    const profBonus = Math.ceil(1 + (character.classes.reduce((acc, c) => acc + (c.level || 0), 0) / 4));
     const diceRegex = /(\b\d*d\d+(?:\s*[+-]\s*\d+)?\b)/gi;
 
     const CLASS_ABILITY_MAP: Record<string, number> = {
@@ -191,14 +211,18 @@ export function getSpells(character: DDBCharacter): Spell[] {
             const def = entry.definition;
             if (!def) return;
 
-            let hit = "";
             let dmg = "";
             const tags = def.tags || [];
             if (tags.includes("Damage")) dmg = "Dmg";
 
+            const desc = def.description || "";
+            const durationMatch = desc.match(/Duration:\s*([^.<]+)/i);
+            const targetMatch = desc.match(/Target:\s*([^.<]+)/i);
+            const dmgTypeMatch = desc.match(damageTypeRegex);
+
             // Try to parse damage dice from description if not found
             if (!dmg || dmg === "Dmg") {
-                const match = (def.description || "").match(diceRegex);
+                const match = desc.match(diceRegex);
                 if (match) dmg = match[0];
             }
 
@@ -210,13 +234,16 @@ export function getSpells(character: DDBCharacter): Spell[] {
             if (def.saveDcAbilityId) attackType = "Save";
 
             // Calculate Hit/DC
+            let hitBonus: string | undefined = undefined;
+            let saveDC: string | undefined = undefined;
+
             if (def.saveDcAbilityId || def.attackType) {
                 if (def.saveDcAbilityId) {
                     const saveMod = getModifier(getStatValue(character, def.saveDcAbilityId));
-                    hit = (8 + profBonus + saveMod).toString();
+                    saveDC = (8 + profBonus + saveMod).toString();
                 } else if (abilityId) {
                     const bonus = profBonus + abilityMod;
-                    hit = bonus >= 0 ? `+${bonus}` : bonus.toString();
+                    hitBonus = bonus >= 0 ? `+${bonus}` : bonus.toString();
                 }
             }
 
@@ -240,10 +267,14 @@ export function getSpells(character: DDBCharacter): Spell[] {
                 castingType: castingType,
                 range: range,
                 components: def.components?.join(", ") || "",
-                description: def.description || "",
+                description: desc,
                 source: safeSource,
-                hitOrDc: hit,
+                hitBonus,
+                saveDC,
                 damage: dmg,
+                damageType: dmgTypeMatch ? dmgTypeMatch[1].toLowerCase() : undefined,
+                duration: durationMatch ? durationMatch[1].trim() : undefined,
+                target: targetMatch ? targetMatch[1].trim() : undefined,
                 attackType: attackType,
                 tags: tags,
                 summonStats: summonData,

@@ -1,69 +1,71 @@
-# Comprehensive Product Backlog: "Combat-Ready" Engine v2.0
+# Product Backlog: "Combat-Ready" Engine v2.1
 
-This document prioritizes **OPEN items** at the top. Completed work is archived at the bottom for reference.
-
----
-
-## 🚀 Active Backlog (Open Items)
-
-### [EPIC-01] Infrastructural Enhancements
-| ID | Feature | Priority | Status |
-| :--- | :--- | :--- | :--- |
-| **FEAT-103** | Sticky Section Headers (IDEA-015) | P2 | ⏳ BACKLOG |
-
-### [EPIC-02] Interaction Model (Speed-to-Action)
-| ID | Feature | Priority | Status |
-| :--- | :--- | :--- | :--- |
-| **FEAT-204** | Mobile-Optimized Hit Targets (IDEA-013) | P1 | ⏳ BACKLOG |
-| **FEAT-206** | Visual Scent for Roll Types (IDEA-009) | P2 | ⏳ BACKLOG |
-| **FEAT-205** | Haptic/Sound Feedback (IDEA-012) | P3 | ⏳ BACKLOG |
-
-### [EPIC-03] Resource Intelligence
-| ID | Feature | Priority | Status |
-| :--- | :--- | :--- | :--- |
-| **FEAT-303** | Resource Charge Visualization (IDEA-010) | P2 | ⏳ BACKLOG |
-
-### [EPIC-05] Accessibility & Design System
-| ID | Feature | Priority | Status |
-| :--- | :--- | :--- | :--- |
-| **FEAT-505** | Light Mode Accent Reconciliation | P1 | ⏳ BACKLOG |
-
-### [EPIC-06] Behavioral Automation
-| ID | Feature | Priority | Status |
-| :--- | :--- | :--- | :--- |
-| **FEAT-601** | Auto-Exhaustion Logic (IDEA-014) | P2 | ⏳ BACKLOG |
-| **FEAT-602** | Sticky Active-Turn Banner (IDEA-011) | P2 | ⏳ BACKLOG |
+**North Star Mission**: Reduce information consumption and decision time during fast-paced combat scenarios.
 
 ---
 
-## ✅ Completed & Archived (DONE)
+## ✅ Completed Milestones
+- **Milestone 6: Data Density** (Duration, Targets, Damage Types, Sticky Accordions) ✅
+- **Milestone 7: Flow & Navigation** (Quick Nav Bridge, Roll Scents, Charge Visuals, Sticky HP Banner) ✅
 
-### [EPIC-01] Infrastructural Combat Dash
-* **FEAT-101**: Unified "Combat Mode" View ✅
-* **FEAT-102**: Tactical Consumable Injection ✅
+---
 
-### [EPIC-02] Speed-to-Action
-* **FEAT-201**: Persistent Roll Buttons ✅
-* **FEAT-202**: Summary Snippets ✅
-* **FEAT-203**: Auto-Expand Logic ✅
+## 🎯 Milestone 8: Decision Support & High Impact (TIER 1)
+**Goal**: Move from "Displaying Data" to "Guiding Decisions"  
+**Priority**: ⭐⭐⭐⭐⭐ Critical Path  
+**Focus**: Visual cues, visceral feedback, and tactical clarity.
 
-### [EPIC-03] Resource Intelligence
-* **FEAT-301**: Inline Spell Slot Awareness ✅
-* **FEAT-302**: Visual Exhaustion (Spent Actions) ✅
-* **FEAT-304**: Integrated Resource Controls (IDEA-016) ✅
+| ID | Feature | Value | Status |
+| :--- | :--- | :---: | :--- |
+| **IDEA-036** | **Action Scents (Visual Categorization)** | 95/100 | ✅ COMPLETED |
+| **FEAT-204** | Mobile-Optimized Hit Targets (IDEA-013) | 85/100 | ⏳ BACKLOG |
+| **IDEA-037** | **Visceral Crits (Screen FX & Feedback)** | 80/100 | ✅ COMPLETED |
+| **IDEA-038** | **Spell Slot "Fuel Gauge" Visualizer** | 75/100 | ✅ COMPLETED |
+| **FEAT-505** | Light Mode Accent Reconciliation | 70/100 | ⏳ BACKLOG |
+| **IDEA-031** | Critical Roll Celebration (Visuals) | 65/100 | 💡 IDEA |
 
-### [EPIC-04] Mechanical Accuracy (RAW Compliance)
-* **FEAT-401**: Fix Missing Damage Rolls (BUG-001) ✅
-* **FEAT-402**: Upcasting Interface (IDEA-018) ✅
-* **FEAT-403**: Concentration Monitor & Safety (IDEA-019) ✅
-* **FEAT-404**: Ritual Casting Awareness (IDEA-020) ✅
-* **FEAT-405**: Rule Validation (Conditions/Haste) (IDEA-021) ✅
+**Success Criteria**:
+- ✅ **IDEA-036**: Actions have color-coded borders (Red/Green/Blue) matching their roll-scent intent.
+- ✅ **IDEA-037**: Nat 20/Nat 1 results trigger clear visual "moment" feedback (edge flashes).
+- ✅ **IDEA-038**: Spell slots presented as a visual bar or battery instead of text lists.
+- [ ] **FEAT-204**: Clickable areas for rolls and resources are sized for "Fat Finger" tablet play.
 
-### [EPIC-05] Visual Accessibility & Theme Parity
-* **FEAT-501**: Adaptive Character Header (IDEA-022) ✅
-* **FEAT-502**: WCAG AA Contrast Compliance (IDEA-023/24) ✅
-* **FEAT-503**: Variable-First Refactor (IDEA-026) ✅
-* **FEAT-504**: Accessible Typography Scales (IDEA-027) ✅
+---
 
-### [EPIC-06] Behavioral Automation
-* **FEAT-603**: Micro-interaction Polishing ✅
+## 🏗️ Milestone 9: Foundation & Performance (TIER 2/3)
+**Goal**: Technical stabilization, performance at scale, and state persistence  
+**Priority**: ⭐⭐⭐ High Value (Internal)  
+**Focus**: Architecture, testing, and memory management.
+
+| ID | Feature | Value | Status |
+| :--- | :--- | :---: | :--- |
+| **IDEA-TECH-009** | **Memoized Tactical Mapping Layer** | 85/100 | 💡 IDEA-TECH |
+| **IDEA-TECH-008** | **Schema-First Character Parser (Zod)** | 80/100 | 💡 IDEA-TECH |
+| **IDEA-TECH-010** | **Persistent Turn State (Local Storage)** | 75/100 | 💡 IDEA-TECH |
+| **IDEA-TECH-002** | Error Handling & Retry Logic | 70/100 | 💡 IDEA-TECH |
+| **IDEA-TECH-001** | Split AppContext (Domain Contexts) | 70/100 | 💡 IDEA-TECH |
+| **IDEA-TECH-003** | Test Coverage for Calculators | 65/100 | 💡 IDEA-TECH |
+| **IDEA-TECH-004** | Code Splitting & Virtualization | 60/100 | 💡 IDEA-TECH |
+
+**Success Criteria**:
+- [ ] **IDEA-TECH-009**: High-level Wizard (100+ spells) scrolls dashboard at 60fps.
+- [ ] **IDEA-TECH-008**: Zero `any` casts in the character parsing utility.
+- [ ] **IDEA-TECH-010**: Refreshing the page preserves spent action economy.
+
+---
+
+## 💤 Future Backlog (Tier 3+)
+| ID | Feature | Status |
+| :--- | :--- | :--- |
+| **IDEA-039** | Interactive Status Reminders | 💡 IDEA |
+| **FEAT-205** | Haptic Feedback (Vibration) | ⏳ BACKLOG |
+| **FEAT-601** | Auto-Exhaustion Logic | ⏳ BACKLOG |
+| **FEAT-702** | Multiattack Workflow | 💤 DEFERRED |
+
+---
+
+## 🧭 Prioritization Framework (Combat-First)
+1. **Decision Speed (35%)**: Does this help a player pick an action faster?
+2. **Error Prevention (25%)**: Does this prevent "Illegal Moves" or "Forgot my concentration"?
+3. **Info Density (20%)**: Does this remove the need to scroll or expand?
+4. **Delight (20%)**: Does it feel like a premium gaming experience?

@@ -1,8 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useAppContext } from '../../context/AppContext';
 import { SheetHeader } from './SheetHeader';
 import { ActionTabs } from './ActionTabs';
-import { SpellSlotBar } from './SpellSlotBar';
+import { SpellSlotVisualizer } from './SpellSlotVisualizer';
 import { FilterControls } from './FilterControls';
 import { SpellItem } from './SpellItem';
 import { ActionItem } from './ActionItem';
@@ -29,7 +29,7 @@ export const CharacterSheetView: React.FC = () => {
 
     // --- Filtered Data ---
     const filteredSpells = useMemo(() => allSpells.filter(spell => {
-        if (filters.attackOnly && !spell.damage && spell.hitOrDc === "") return false;
+        if (filters.attackOnly && !spell.damage && !spell.hitBonus && !spell.saveDC) return false;
         if (filters.levels.length > 0 && !filters.levels.includes(spell.level)) return false;
         if (filters.tags.length > 0) {
             if (!spell.tags || !spell.tags.some((t: string) => filters.tags.includes(t))) return false;
@@ -53,6 +53,12 @@ export const CharacterSheetView: React.FC = () => {
         return map;
     }, [filteredSpells]);
 
+    const [collapsedSpells, setCollapsedSpells] = useState<Record<number, boolean>>({});
+
+    const toggleSpellLevel = (lvl: number) => {
+        setCollapsedSpells((prev: Record<number, boolean>) => ({ ...prev, [lvl]: prev[lvl] === false ? true : false }));
+    };
+
     if (!character) return null;
 
     return (
@@ -65,7 +71,7 @@ export const CharacterSheetView: React.FC = () => {
                     <ActionTabs />
                     {activeTab === 'Spell' && (
                         <>
-                            <SpellSlotBar />
+                            <SpellSlotVisualizer />
                             <FilterControls />
                         </>
                     )}
@@ -76,13 +82,21 @@ export const CharacterSheetView: React.FC = () => {
                         ) : activeTab === 'Spell' ? (
                             Object.keys(spellsByLevel).sort((a, b) => Number(a) - Number(b)).map(levelKey => {
                                 const lvl = Number(levelKey);
+                                const isCollapsed = collapsedSpells[lvl] !== false; // Default to collapsed (true)
                                 return (
                                     <div key={lvl}>
-                                        <div className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em] border-b border-[var(--border-color)]/50 mb-3 mt-4 pb-1 flex items-center gap-2">
+                                        <div
+                                            onClick={() => toggleSpellLevel(lvl)}
+                                            className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em] border-b border-[var(--border-color)]/50 mb-3 mt-4 pb-1 flex items-center gap-2 cursor-pointer sticky top-[48px] z-10 bg-[var(--bg-app)]/95 backdrop-blur-md group py-2"
+                                        >
+                                            <span className={`text-[12px] transition-transform duration-300 ${isCollapsed ? '-rotate-90' : 'rotate-0'}`}>
+                                                {isCollapsed ? '▸' : '▾'}
+                                            </span>
                                             <span>{lvl === 0 ? "Cantrips" : `Level ${lvl} Spells`}</span>
-                                            <div className="h-px flex-1 bg-[var(--border-color)]/30"></div>
+                                            <div className="h-px flex-1 bg-[var(--border-color)]/30 group-hover:bg-[var(--border-color)]/60 transition-colors"></div>
+                                            <span className="opacity-40 group-hover:opacity-100 transition-opacity">{spellsByLevel[lvl].length} Count</span>
                                         </div>
-                                        {spellsByLevel[lvl].map((spell, idx) => (
+                                        {!isCollapsed && spellsByLevel[lvl].map((spell, idx) => (
                                             <SpellItem
                                                 key={`${lvl}-${idx}`}
                                                 spell={spell}

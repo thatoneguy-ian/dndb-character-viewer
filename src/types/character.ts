@@ -50,11 +50,16 @@ export interface Action {
     description: string;
     type: "Action" | "Bonus" | "Reaction" | "Other";
     source: string;
-    hitOrDc: string;
+    hitBonus?: string;
+    saveDC?: string;
     damage: string;
+    damageType?: string;
     range: string;
+    duration?: string;
+    target?: string;
     attackType: string;
     className?: string;
+    resource?: { current: number; max: number };
 }
 
 export interface Spell {
@@ -67,8 +72,12 @@ export interface Spell {
     components: string;
     description: string;
     source: string;
-    hitOrDc: string;
+    hitBonus?: string;
+    saveDC?: string;
     damage: string;
+    damageType?: string;
+    duration?: string;
+    target?: string;
     attackType: string;
     tags?: string[];
     summonStats?: SummonStats | null;
@@ -101,6 +110,7 @@ export interface RollResult {
     id: string;
     notation: string;
     label?: string;
+    rollType?: 'attack' | 'damage' | 'save' | 'check' | 'skill';
     rolls: DiceRoll[];
     modifier: number;
     total: number;
@@ -112,10 +122,17 @@ export interface CombatCapability {
     name: string;
     cost: 'Action' | 'Bonus' | 'Reaction' | 'Other';
     type: 'Spell' | 'Action' | 'Item' | 'Consumable';
-    rollData?: { hitOrDc?: string, damage?: string };
+    rollData?: {
+        hitBonus?: string;
+        saveDC?: string;
+        damage?: string;
+        damageType?: string;
+    };
     resource?: { current: number, max: number };
     description: string;
     source: string;
     range: string;
+    duration?: string;
+    target?: string;
     originalData: any;
 }
