@@ -3,9 +3,12 @@ import { calculateHP, calculateAC, getInitiative, getPassiveStats } from '../../
 import { Badge } from '../common';
 
 import { useAppContext } from '../../context/AppContext';
+import { PromptBuilderModal } from './PromptBuilderModal';
 
 export const CharacterHeader: React.FC = () => {
     const { character } = useAppContext();
+    const [showPromptBuilder, setShowPromptBuilder] = React.useState(false);
+
     if (!character) return null;
 
     const hp = calculateHP(character);
@@ -19,13 +22,24 @@ export const CharacterHeader: React.FC = () => {
             bg-[var(--accent-gradient)] shadow-[var(--accent-card-shadow)]
             border-white/10">
             <div className="flex items-center gap-4">
-                <div className="relative">
-                    <img
-                        src={avatarUrl}
-                        className="w-16 h-16 rounded-full border-2 border-[var(--color-danger)]/50 bg-[var(--bg-input)] p-0.5 object-cover shadow-lg shadow-[var(--color-danger)]/20"
-                        alt={character.name}
-                    />
-                    <div className="absolute -bottom-1 -right-1 bg-[var(--bg-app)] px-1.5 py-0.5 rounded-full border border-[var(--border-color)] text-[10px] font-black text-[var(--text-primary)] shadow-md">
+                <div className="relative group">
+                    <button
+                        onClick={() => setShowPromptBuilder(true)}
+                        className="relative block rounded-full focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2 focus:ring-offset-[var(--bg-app)] transition-transform hover:scale-105"
+                        title="Open Art Prompt Builder"
+                    >
+                        <img
+                            src={avatarUrl}
+                            className="w-16 h-16 rounded-full border-2 border-[var(--color-danger)]/50 bg-[var(--bg-input)] p-0.5 object-cover shadow-lg shadow-[var(--color-danger)]/20"
+                            alt={character.name}
+                        />
+                        <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                            </svg>
+                        </div>
+                    </button>
+                    <div className="absolute -bottom-1 -right-1 bg-[var(--bg-app)] px-1.5 py-0.5 rounded-full border border-[var(--border-color)] text-[10px] font-black text-[var(--text-primary)] shadow-md pointer-events-none">
                         Lvl {character.classes.reduce((sum, cls) => sum + cls.level, 0)}
                     </div>
                 </div>
@@ -75,6 +89,12 @@ export const CharacterHeader: React.FC = () => {
                     <span className="text-[8px] text-[var(--text-muted)] font-bold uppercase tracking-widest">Passive Inv</span>
                 </div>
             </div>
+
+            <PromptBuilderModal
+                character={character}
+                open={showPromptBuilder}
+                onClose={() => setShowPromptBuilder(false)}
+            />
         </div>
     );
 };

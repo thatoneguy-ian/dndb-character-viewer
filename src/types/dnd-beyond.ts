@@ -41,6 +41,40 @@ export interface DDBCharacter {
   conditions: any[];
   appliedConditions: any[];
   statusEffects: any[];
+  gender: string | null;
+  faith: string | null;
+  age: number | null;
+  hair: string | null;
+  eyes: string | null;
+  skin: string | null;
+  height: string | null;
+  weight: number | null;
+  traits?: {
+    personalityTraits?: string | null;
+    ideals?: string | null;
+    bonds?: string | null;
+    flaws?: string | null;
+    appearance?: string | null;
+  };
+  notes?: {
+    backstory?: string | null;
+    otherNotes?: string | null;
+  };
+  race?: {
+    fullName: string;
+    description: string;
+    avatarUrl?: string;
+  };
+  background?: {
+    definition?: {
+      name: string;
+      description: string;
+    };
+    customBackground?: {
+      name?: string;
+      description?: string;
+    };
+  };
 }
 
 export interface DDBClassFeature {
