@@ -194,16 +194,25 @@ export const PromptBuilderModal: React.FC<PromptBuilderModalProps> = ({ characte
                     </div>
                 </div>
 
-                <div className="p-4 border-t border-[var(--border-color)] bg-[var(--bg-app)] flex justify-end">
+                <div className="p-4 border-t border-[var(--border-color)] bg-[var(--bg-app)] flex justify-end gap-3">
                     <button
                         onClick={onClose}
                         className="px-4 py-2 rounded text-sm font-bold text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
                     >
                         Close
                     </button>
+                    <a
+                        href="https://gemini.google.com/app"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 py-2 rounded bg-gradient-to-r from-blue-500 to-purple-600 text-white text-sm font-bold shadow-lg hover:shadow-purple-500/40 transition-all hover:scale-105 flex items-center gap-2"
+                    >
+                        <span>Open Gemini</span>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                    </a>
                     <button
                         onClick={copyToClipboard}
-                        className="ml-3 px-6 py-2 rounded bg-[var(--color-primary)] text-white text-sm font-bold shadow-lg hover:shadow-[var(--color-primary)]/40 transition-all hover:scale-105"
+                        className="px-6 py-2 rounded bg-[var(--color-primary)] text-white text-sm font-bold shadow-lg hover:shadow-[var(--color-primary)]/40 transition-all hover:scale-105"
                     >
                         Copy Prompt
                     </button>
